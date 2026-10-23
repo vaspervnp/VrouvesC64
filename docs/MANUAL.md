@@ -105,8 +105,9 @@ is not grass, or you cannot afford the defender.
   lost. With a life left, one life goes and you play the same stage again from the start,
   with your score as it was when the stage began. With none left, the game is over and you go
   back to the title screen.
-* When many invaders crowd the same stretch of road, some of them flicker: the C64 shows
-  eight sprites on the same lines, and takes turns with the rest.
+* When many invaders crowd the same stretch of road, the C64 shows eight of them as sprites and
+  draws the rest into the picture, in two tones: nothing flickers, though the game may move a
+  little less smoothly while the crowd lasts.
 * Survive all ten waves and you move on to the next stage. Win the last one, and the vrouves
   are safe: the whole village celebrates at a feast in front of the school. Press SPACE /
   FIRE to go back to the title screen.

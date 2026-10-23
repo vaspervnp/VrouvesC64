@@ -60,6 +60,12 @@ mux_end         .byte ?
 msb_shadow      .byte ?
 test_keys       .byte ?                 ; tests: $ff = none
 sp_ptr          .word ?                 ; the spawning: the next group
+svp             .word ?                 ; shots.asm: the next free record of save_buf
+dd_mp           .word ?                 ; shots.asm: an invader's masks,
+dd_d            .fill 3                 ; a line's dark and bright pixels,
+dd_b            .fill 3
+dd_pd           .fill 3                 ; the cells' dark and bright patterns
+dd_pb           .fill 3
         .endv
 
         .virtual WORK
@@ -111,11 +117,6 @@ f_x             .fill MAX_FX
 f_y             .fill MAX_FX
 f_t             .fill MAX_FX
 ENT_END
-; the bitmap under the shots
-sv_lo           .fill MAX_SAVE
-sv_hi           .fill MAX_SAVE
-sv_val          .fill MAX_SAVE
-sv_n            .byte ?
 ; sprite objects (mux.asm), then the lists for the IRQ, two of them
 ob_y            .fill MAX_OBJ
 ob_x            .fill MAX_OBJ
@@ -123,6 +124,10 @@ ob_xh           .fill MAX_OBJ
 ob_ptr          .fill MAX_OBJ
 ob_col          .fill MAX_OBJ
 ob_ord          .fill MAX_OBJ
+ob_px           .fill MAX_OBJ           ; x (two pixel units), playfield line,
+ob_line         .fill MAX_OBJ           ; sprite: for drawing it into the bitmap
+ob_spr          .fill MAX_OBJ
+ob_drop         .fill MAX_OBJ           ; no sprite for it this frame (mux_build)
 ob_n            .byte ?
 dl_line         .fill 2*MAX_OBJ
 dl_spr          .fill 2*MAX_OBJ         ; the sprite * 2
@@ -196,7 +201,6 @@ end_wait        .byte ?
 ticks_due       .byte ?
 frame_acc       .byte ?
 flag_frame      .byte ?
-ob_rot          .byte ?                 ; the enemy the sprite list starts from
 unlock          .byte ?                 ; the stage's defenders, a bit per type
 GV_END
 SSTATE                                  ; sound.asm's state

@@ -78,7 +78,10 @@ MAX_TW          = 32
 MAX_PR          = 20
 MAX_FX          = 8
 MAX_OBJ         = 32                    ; hardware sprite objects a frame
-MAX_SAVE        = 160                   ; bitmap bytes under the shots
+EMASK           = $0400                 ; the invaders' masks (shots.asm, made at start)
+SWAPTAB         = $0700                 ; a byte's two halves swapped
+MAX_SAVE        = 160                   ; bitmap bytes kept under the shots
+DS_MAX          = 156                   ; and lines under the objects without a sprite
 
 ET_DRONE        = 1
 ET_GUARD        = 2

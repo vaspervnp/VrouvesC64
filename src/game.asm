@@ -77,6 +77,7 @@ _loop   lda frame                       ; a new frame (a slow pass has had one)
         sta frame_acc
         lda #2
 +       sta ticks_due
+        sta ticks_run
         lda paused
         bne _draw
 -       lda ticks_due
@@ -86,9 +87,12 @@ _loop   lda frame                       ; a new frame (a slow pass has had one)
         lda game_over
         beq -
 _draw   jsr flag_tick
-        jsr shots_draw
         jsr hud_refresh
+        jsr sprites_due                 ; the sprite list again only if anything moved
+        bcc +
         jsr build_sprites
++       jsr dropped_draw                ; what has no sprite, into the bitmap
+        jsr shots_draw
 frame_done = *                          ; (tests stop here)
         lda game_over
         beq _loop
@@ -174,7 +178,7 @@ game_init
 -       sta GV_START,x
         dex
         bpl -
-        sta sv_n
+        jsr save_reset
         lda #<START_FUNDS
         sta funds
         lda #>START_FUNDS
@@ -1860,6 +1864,29 @@ flag_tick
         jmp compose_flag
 +       rts
 
+; C set if the sprites must be listed again: the logic ran (they moved), a
+; key is down (the cursor), or the cursor blinks
+sprites_due
+        lda ticks_run
+        ora paused                      ; (paused: as often as the cursor needs)
+        bne _yes
+        jsr any_down
+        bcs _yes
+        lda frame
+        and #8
+        cmp blink_was
+        bne _yes
+        clc
+        rts
+_yes    lda frame
+        and #8
+        sta blink_was
+        sec
+        rts
+
+ticks_run       .byte 0
+blink_was       .byte 0
+
 ; the sprite objects of this frame: the cursor, the invaders (from a
 ; different one each frame), the effects
 build_sprites
@@ -1892,12 +1919,8 @@ _bad    ldy #SPR_CURSOR_BAD
         tax
         pla
         jsr obj_add
-_en     lda ob_rot
-        clc
-        adc #5
-        and #15
-        sta ob_rot
-        sta t5
+_en     lda #0                          ; (always in the same order: an invader
+        sta t5                          ; keeps its sprite, or its place in the bitmap)
         lda #MAX_EN
         sta t6
 -       ldx t5

@@ -31,7 +31,8 @@ version in `../VrouvesCPC`; its README and `src/game.asm` are the reference for 
   colours exactly as `tools/c64gfx.py` does; `tests/test_compose.py` checks them byte for byte.
   Keep the two in step.
 - The banner owns playfield rows 9-11 while `ban_on`: `compose_cell` skips them.
-- Shots are bitmap bytes saved and restored (`shots.asm`). Anything that draws on the playfield
+- Shots, and the objects `mux_build` found no sprite for (`ob_drop`), are bitmap bytes saved and
+  restored (`shots.asm`: `save_buf` byte by byte, `ds_*` a line at a time). Anything that draws on the playfield
   during a pass must run between `shots_erase` and `shots_draw` (or call `shots_erase` first, as
   `redraw_tile` and the banner do).
 

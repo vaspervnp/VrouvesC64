@@ -8,8 +8,9 @@
 ; one by an entry at the line where its sprite's last object has ended (a
 ; sprite shows 21 lines whatever it holds). Taking the sprite free the
 ; longest keeps these lines in order. An object with no sprite free in time
-; is not shown this frame; the objects come in a different order every
-; frame (ob_rot), so in a crowd it is a different one each time.
+; gets ob_drop: shots.asm draws it into the bitmap instead, so nothing
+; flickers. The objects come in the same order every frame, so in a crowd
+; the same ones keep their sprites.
 ; =============================================================================
 
 SPR_LINES       = 21
@@ -35,6 +36,16 @@ obj_add
         sta ob_ptr,x
         lda t0
         sta ob_col,x
+        tya
+        sta ob_spr,x
+        lda ob_y,x
+        sec
+        sbc #SPR_Y0
+        sta ob_line,x
+        lda t1
+        sta ob_px,x
+        lda #0
+        sta ob_drop,x
         lda t1                          ; X register = 24 + 4 * x
         asl a
         asl a
@@ -56,15 +67,24 @@ mux_build
         lda dl_ready
         beq +
         rts
-+       ldx ob_n                        ; sort: insertion, by Y
-        beq _sorted
-        lda #0
-        sta ob_ord
-        ldx #1
++       ldx ob_n                        ; sort by Y: insertion, starting from the
+        beq _sorted                     ; order of the last list (nearly sorted)
+        cpx mx_prev_n
+        beq _keep
+        stx mx_prev_n                   ; (another number of objects: from scratch)
+        dex
+-       txa
+        sta ob_ord,x
+        dex
+        bpl -
+_keep   ldx #1
 _ins    cpx ob_n
         bcs _sorted
-        stx t2                          ; t2 = the object to place
-        lda ob_y,x
+        stx t2                          ; t2 = the slot being placed
+        lda ob_ord,x
+        sta t1                          ; t1 = its object
+        tay
+        lda ob_y,y
         sta t3
         ldy t2                          ; Y = the slot it goes to
 -       cpy #0
@@ -78,7 +98,7 @@ _ins    cpx ob_n
         sta ob_ord,y
         dey
         jmp -
-_put    lda t2
+_put    lda t1
         sta ob_ord,y
         ldx t2
         inx
@@ -155,9 +175,9 @@ _obj    lda t3
 _reuse  lda ob_y,x                      ; free in time?
         sec
         sbc #REUSE_GAP
-        bcc _skip
+        bcc _drop
         cmp t2
-        bcc _skip
+        bcc _drop
         sty t1
         ldy t5                          ; an entry
         lda t2
@@ -188,6 +208,9 @@ _taken  lda ob_y,x                      ; the sprite is busy until Y + 21 + 1
         bcc +
         lda #$ff
 +       sta mx_free,y
+        jmp _skip
+_drop   lda #1                          ; no sprite: shots.asm draws it
+        sta ob_drop,x
 _skip   inc t3
         jmp _obj
 _done   ldx #0                          ; the list's totals
@@ -207,4 +230,5 @@ _done   ldx #0                          ; the list's totals
         rts
 
 fs_msb_tmp      .byte 0
+mx_prev_n       .byte 0                 ; the objects in the last list
 bit_tab         .byte 1,2,4,8,16,32,64,128

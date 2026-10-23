@@ -7,7 +7,8 @@
 ; Memory:
 ;   $0002-$008f   zero page (vars.inc); $0090-$03ff is left to the KERNAL,
 ;                 which loads and saves for us (the high scores, the ending)
-;   $0801-$bfff   BASIC stub, code, data
+;   $0801-$bfff   BASIC stub, code, data, then the bitmap's save buffer and
+;                 the cells' colour codes (main.asm, at the end)
 ;   $c000-$c3ff   screen RAM (VIC bank 3)
 ;   $c400-$cfff   workspace (vars.inc)
 ;   $d000-$d7ff   sprite blocks, in the RAM under the I/O
@@ -98,6 +99,8 @@ start
         sta seed+1
         lda #1
         sta mus_on
+        jsr save_reset
+        jsr masks_init
         jsr video_init
         jsr sound_init
         lda #TUNE_MENU
@@ -183,4 +186,16 @@ code_end
         .include "data/text.asm"
         .include "data/music.asm"
 data_end
-        .cerror data_end > SCREEN, "the program runs into the screen at $c000"
+
+; workspace after the program (not in the file)
+        .virtual data_end
+save_buf        .fill MAX_SAVE * 3      ; shots.asm: address, old value
+ds_lo           .fill DS_MAX            ; and the objects' lines
+ds_hi           .fill DS_MAX
+ds_b0           .fill DS_MAX
+ds_b1           .fill DS_MAX
+ds_b2           .fill DS_MAX
+cell_codes      .fill PF_ROWS * 40      ; compose.asm: each cell's darkest, brightest code
+LOW_END
+        .endv
+        .cerror LOW_END > SCREEN, "the program and its workspace run into the screen at $c000"

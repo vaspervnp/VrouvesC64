@@ -102,6 +102,7 @@ _noov   jsr flag_line
         beq +
         jmp _line
 +       jsr quantize
+        jsr cell_code
         ldx cv_x
         ldy cv_y
         iny
@@ -141,6 +142,36 @@ cell_write
         sta (scrp),y
         lda cv_slot+3
         sta (colp),y
+        rts
+
+; the cell's darkest and brightest colours (their codes) -> cell_codes, for
+; what shots.asm draws over it: dark << 2 | bright
+cell_code
+        ldx cv_y
+        jsr codes_row
+        lda #$ff
+        sta t1                          ; the darkest so far
+        lda #0
+        sta t2                          ; the brightest so far
+        ldx #3
+-       ldy cv_slot,x
+        lda luma_tab,y
+        cmp t1
+        bcs +
+        sta t1
+        stx t3
++       cmp t2
+        bcc +
+        sta t2
+        stx t4
++       dex
+        bpl -
+        lda t3
+        asl a
+        asl a
+        ora t4
+        ldy cv_x
+        sta (ptr2),y
         rts
 
 ; optr = an overlay (pens two a byte, 0 clear), Y = offset of the two bytes

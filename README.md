@@ -80,11 +80,13 @@ table, and the feast at the school when the last stage is won.
 - **Hardware sprites for everything that moves**: the invaders (all their frames, mirrored for walking
   left), the effects and the cursor, through a **sprite multiplexer** (`src/mux.asm`, `src/irq.asm`).
   The objects are sorted by Y each frame and each goes to the sprite that has been free the longest;
-  the raster interrupts move the sprites down the screen as their last object ends. In a crowd of more
-  than eight on the same lines, a different one is left out each frame (a flicker, as in the C64's own
-  games of the kind).
+  the raster interrupts move the sprites down the screen as their last object ends. The order is the
+  same every frame, so in a crowd of more than eight on the same lines the same ones keep their
+  sprites, and the rest are drawn into the bitmap instead, in the darkest and brightest colours of the
+  cells under them: no flicker.
 - **The shots** are too many for the sprites: they are drawn straight into the bitmap in the brightest
-  colour of the cell they cross, the bytes under them kept and put back (`src/shots.asm`).
+  colour of the cell they cross. The bytes under shots and drawn objects are kept and put back before
+  the next pass (`src/shots.asm`).
 - **The logic runs at 25 Hz** as on the CPC (a tick every two frames, at most two ticks per pass of
   the loop), so the pace is the same whatever the drawing takes; the sprites and the input run at up to
   50 Hz.
