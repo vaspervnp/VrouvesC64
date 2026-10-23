@@ -1,0 +1,40 @@
+# Game tune: the CPC's tune in D minor (A twice, then B), a Cretan dance.
+# Lead, bass through the filter, drums and chords (the effects take voice 3
+# while they play).
+# tune: game
+# quarter: 24
+# loop: yes
+#
+# A sixteenth is 6 ticks, as on the CPC. Chords, half a bar each:
+#   A:  Dm Dm | C Dm | Bb F | C Dm | Bb Gm | A A | Dm C | A Dm
+#   B:  Dm Dm | C A | F C | A Dm
+
+# --- melody (voice 1) ---
+pat rest1: r/1
+pat ma: @lead D5/8 E5/8 F5/8 G5/8 A5/4 G5/8 F5/8 | E5/8 F5/8 G5/8 E5/8 D5/2 |
+        A5/8 Bb5/8 A5/8 G5/8 F5/8 G5/8 A5/4 | G5/8 F5/8 E5/8 F5/8 D5/2 |
+        D6/8 C6/8 Bb5/8 A5/8 Bb5/8 A5/8 G5/4 | A5/8 G5/8 F5/8 E5/8 F5/4 E5/4 |
+        D5/8 E5/8 F5/8 G5/8 A5/8 G5/8 F5/8 E5/8 | E5/8 F5/8 E5/8 C#5/8 D5/2
+pat mb: @lead2 A5/16 Bb5/16 A5/16 G5/16 A5/8 D5/8 A5/16 Bb5/16 A5/16 G5/16 A5/8 D5/8 |
+        G5/16 A5/16 G5/16 F5/16 G5/8 C5/8 G5/16 A5/16 G5/16 F5/16 E5/4 |
+        F5/16 G5/16 F5/16 E5/16 F5/8 A5/8 E5/16 F5/16 E5/16 D5/16 E5/8 G5/8 |
+        F5/8 E5/8 D5/8 C#5/8 D5/2
+
+# --- bass (voice 2): half a bar, the root and its fifth, in C (transposed) ---
+pat bh:  @bass C2/8. r/16 G2/8. r/16
+seq bsA: bh+2 bh+2 bh bh+2 bh-2 bh+5 bh bh+2 bh-2 bh+7 bh+9 bh+9 bh+2 bh bh+9 bh+2
+seq bsB: bh+2 bh+2 bh bh+9 bh+5 bh bh+9 bh+2
+
+# --- drums and chords (voice 3): half a bar; the chord on C4 (transposed) ---
+pat dM:  @kick C3/8 @arpM C4/8 @snare C3/8 @arpM C4/8
+pat dM2: @kick C3/8 @kick C3/8 @snare C3/8 @arpM C4/8
+pat dm:  @kick C3/8 @arpm C4/8 @snare C3/8 @arpm C4/8
+pat dm2: @kick C3/8 @kick C3/8 @snare C3/8 @arpm C4/8
+pat dH:  @kick C3/8 @hat C3/8 @snare C3/8 @hat C3/8
+pat dF:  @kick C3/8 @snare C3/16 C3/16 C3/8 C3/16 C3/16
+seq dsA: dm+2 dm2+2 dM dm2+2 dM-2 dM2+5 dM dm2+2 dM-2 dm2+7 dM+9 dM2+9 dm+2 dM2 dM+9 dF
+seq dsB: dm+2 dm2+2 dM dM2+9 dM+5 dM2 dM+9 dF
+
+v1: rest1 > ma ma mb
+v2: bh+2 bh+2 > bsA bsA bsB
+v3: dH dF > dsA dsA dsB

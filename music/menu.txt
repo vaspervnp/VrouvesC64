@@ -1,0 +1,24 @@
+# Title tune: the CPC's melody, calm, a flute over a harp, in D minor.
+# tune: menu
+# quarter: 32
+# loop: yes
+
+# --- melody (voice 1) ---
+pat rest1: r/1
+pat m1: @flute D5/8 E5/8 F5/8 G5/8 A5/4 G5/8 F5/8 | E5/8 F5/8 G5/8 E5/8 D5/2 |
+        A5/8 Bb5/8 A5/8 G5/8 F5/8 G5/8 A5/4 | G5/8 F5/8 E5/8 F5/8 D5/2 |
+        D6/8 C6/8 Bb5/8 A5/8 Bb5/8 A5/8 G5/4 | A5/8 G5/8 F5/8 E5/8 F5/4 E5/4 |
+        D5/8 E5/8 F5/8 G5/8 A5/8 G5/8 F5/8 E5/8 | E5/8 F5/8 E5/8 C#5/8 D5/2
+
+# --- bass (voice 2): half a bar in C (transposed) ---
+pat mb: @mbass C2/4 G2/4
+seq mb1: mb+2 mb+2 mb mb+2 mb-2 mb+5 mb mb+2 mb-2 mb+7 mb+9 mb+9 mb+2 mb mb+9 mb+2
+
+# --- harp (voice 3): a broken chord, half a bar in C ---
+pat hM: @harp C4/8 E4/8 G4/8 E4/8
+pat hm: @harp C4/8 D#4/8 G4/8 D#4/8
+seq h1: hm+2 hm+2 hM hm+2 hM-2 hM+5 hM hm+2 hM-2 hm+7 hM+9 hM+9 hm+2 hM hM+9 hm+2
+
+v1: rest1 > m1
+v2: mb+2 mb+2 > mb1
+v3: hm+2 hm+2 > h1
