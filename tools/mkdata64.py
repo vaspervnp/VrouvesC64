@@ -369,7 +369,7 @@ def sprite_data():
         ("boom_a", A.BOOM_A), ("boom_b", A.BOOM_B), ("zap_a", A.ZAP_A),
         ("cursor_ok", A.CURSOR_OK), ("cursor_okb", A.CURSOR_OK_B), ("cursor_bad", A.CURSOR_BAD),
     ]
-    own = {"cursor_ok": g.WHITE, "cursor_okb": g.YELLOW, "cursor_bad": g.RED}
+    own = {"cursor_ok": g.WHITE, "cursor_okb": g.YELLOW, "cursor_bad": g.LIGHT_RED}
     G = ["; hardware sprites, copied to SPRITES at start: 64 bytes each",
          "NUM_SPRITES = %d" % len(sprites), "sprite_data"]
     cols, shown = [], []
