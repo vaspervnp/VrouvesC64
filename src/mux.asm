@@ -2,8 +2,8 @@
 ; mux.asm - the sprite multiplexer's list: up to MAX_OBJ objects a frame on
 ; the eight hardware sprites.
 ;
-; ob_pin (the cursor) has sprite 7 to itself, so it never goes into the
-; bitmap; the others share sprites 0-6.
+; ob_pin (the cursor) has sprite 0 to itself, in front of every other
+; sprite, and never goes into the bitmap; the others share sprites 1-7.
 ;
 ; The objects (ob_y = the Y register, ob_x/ob_xh, ob_ptr, ob_col) are sorted
 ; by Y. Each one, in that order, goes to the sprite that has been free the
@@ -131,12 +131,9 @@ _sorted
         inx
         cpx #8
         bne -
-        ldx ob_pin                      ; the pinned one: sprite 7, all the frame
+        ldx ob_pin                      ; the pinned one: sprite 0, all the frame
         bmi _nopin
-        lda t6
-        clc
-        adc #7
-        tay
+        ldy t6
         lda ob_y,x
         sta fs_y,y
         lda ob_x,x
@@ -147,12 +144,12 @@ _sorted
         sta fs_col,y
         lda ob_xh,x
         beq +
-        lda #$80
+        lda #$01
         sta fs_msb_tmp
-+       lda #$80
++       lda #$01
         sta t7
         lda #$ff
-        sta mx_free+7
+        sta mx_free
 _nopin  lda #0
         sta t3                          ; t3 = the objects done
 _obj    lda t3

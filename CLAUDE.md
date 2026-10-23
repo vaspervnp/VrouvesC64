@@ -44,7 +44,7 @@ and why.
 
 ## Sprites (`mux.asm`, `irq.asm`)
 
-- `ob_pin` (the cursor) has sprite 7 to itself. The others: sorted by Y; each goes to the sprite free the longest, so the IRQ entries come in line
+- `ob_pin` (the cursor) has sprite 0 to itself (in front of the others). The others: sorted by Y; each goes to the sprite free the longest, so the IRQ entries come in line
   order. A sprite is busy for 21 lines whatever it shows; reuse needs `REUSE_GAP` lines more.
 - `mux_build` builds the list not on show and sets `dl_ready`; the frame IRQ swaps. Never build
   while `dl_ready` is set.

@@ -2003,6 +2003,8 @@ _bad    ldy #SPR_CURSOR_BAD
         tax
         pla
         jsr obj_add
+        lda #0                          ; (object 0: a sprite of its own)
+        sta ob_pin
 _en     lda #0                          ; (always in the same order: an invader
         sta t5                          ; keeps its sprite, or its place in the bitmap)
         lda #MAX_EN
