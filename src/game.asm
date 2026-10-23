@@ -49,12 +49,19 @@ sq_hi           .byte >(range(64) * range(64))
 ; =============================================================================
 game_run
         jsr game_init
-_loop   lda frame                       ; a new frame (a slow pass has had one)
-        cmp pass_frame
-        beq _loop
+_loop   lda frame                       ; every frame: the keys
+        cmp kb_frame
+        beq +
+        sta kb_frame
+        jsr kbd_scan
++       lda frame                       ; a pass every PASS_FRAMES (a slow one
+        sec                             ; makes the next start at once)
+        sbc pass_frame
+        cmp #PASS_FRAMES
+        bcc _loop
+        lda frame
         sta pass_frame
         jsr kbd_update
-        jsr shots_erase
         jsr handle_input
         lda quit
         beq +
@@ -86,13 +93,12 @@ _loop   lda frame                       ; a new frame (a slow pass has had one)
         dec ticks_due
         lda game_over
         beq -
-_draw   jsr flag_tick
-        jsr hud_refresh
+_draw   jsr hud_refresh
         jsr sprites_due                 ; the sprite list again only if anything moved
         bcc +
         jsr build_sprites
-+       jsr dropped_draw                ; what has no sprite, into the bitmap
-        jsr shots_draw
++       jsr flag_tick
+        jsr bitmap_draw                 ; what has no sprite, the shots, the flag
 frame_done = *                          ; (tests stop here)
         lda game_over
         beq _loop
@@ -202,6 +208,7 @@ game_init
         sta unlock
         jsr clear_screen
         jsr compose_all
+        jsr flag_cache
         lda #B_STAGE
         ldx #B_CALL
         jsr msg_show
@@ -554,6 +561,9 @@ _got    lda sel_type
         sta t_cd,x
         lda #0
         sta t_dis,x
+        inc tw_seq
+        lda tw_seq
+        sta t_seq,x
         stx t0
         jsr cursor_ptr                  ; 2 = blocked: $40 marks it
         and #2
@@ -707,12 +717,39 @@ mul12           .byte range(0, 14*12, 12)
 
 ; X = col, Y = row: the tile's cells drawn again
 redraw_tile
-        stx t6
-        sty t7
-        jsr shots_erase                 ; (no shot over it while it changes)
-        ldx t6
-        ldy t7
-        jmp compose_tile
+        stx rt_c
+        sty rt_r
+        jsr compose_tile                ; (compose_cell puts each strip back first)
+        lda rt_c                        ; the flag's cells among its own: their
+        asl a                           ; frames again
+        cmp fc_c1                       ; (its columns 2 c, 2 c + 1)
+        beq +
+        bcs _r
++       clc
+        adc #1
+        cmp fc_c0
+        bcc _r
+        ldx rt_r                        ; (its rows 12 r / 8 .. (12 r + 11) / 8)
+        lda mul12,x
+        lsr a
+        lsr a
+        lsr a
+        cmp fc_r1
+        beq +
+        bcs _r
++       lda mul12,x
+        clc
+        adc #11
+        lsr a
+        lsr a
+        lsr a
+        cmp fc_r0
+        bcc _r
+        jmp flag_cache
+_r      rts
+
+rt_c            .byte 0
+rt_r            .byte 0
 
 ; =============================================================================
 ; waves
@@ -1162,7 +1199,7 @@ kill_enemy
         jsr spawn_fx
         lda #SFX_DIE
         jsr sfx_play
-        lda #HUDF_FUNDS|HUDF_TOP
+        lda #HUDF_FUNDS|HUDF_SCORE
         jmp hud_set
 
 ; a tank dents the cauldrons next to it
@@ -1331,8 +1368,51 @@ all_damage
         ldy iy
         lda tr_dmg
         sta t_dmg,y
+        lda tr_pos
+        sta t_pos,y
 +       dey
         bpl -
+        ldy #MAX_TW-1                   ; a bonus for SYN_MAX of them at most: the
+_i      lda t_type,y                    ; ones built first keep theirs
+        beq _ni
+        lda t_pos,y
+        beq _ni
+        lda #0
+        sta t0                          ; t0 = those built before it with one
+        ldx #MAX_TW-1
+_j      lda t_type,x
+        beq _nj
+        lda t_pos,x
+        beq _nj
+        lda t_seq,x
+        cmp t_seq,y
+        bcs _nj
+        inc t0
+_nj     dex
+        bpl _j
+        lda t0
+        cmp #SYN_MAX
+        bcc _ni
+        ldx t_type,y                    ; one too many: its own damage
+        lda tt_dmg-1,x
+        sta t_dmg,y
+_ni     dey
+        bpl _i
+        rts
+
+; A = the defenders with a neighbour bonus now
+syn_count
+        lda #0
+        sta t0
+        ldx #MAX_TW-1
+-       lda t_type,x
+        beq +
+        lda t_pos,x
+        beq +
+        inc t0
++       dex
+        bpl -
+        lda t0
         rts
 
 ; Y = defender -> tr_dmg: its damage, more or less with a partner next door
@@ -1340,6 +1420,8 @@ syn_dmg
         ldx t_type,y
         lda tt_dmg-1,x
         sta tr_dmg
+        lda #0
+        sta tr_pos
         sty t6
         lda t_row,y
         pha
@@ -1354,6 +1436,10 @@ syn_dmg
         bcc _x
         lda syn_factor-1,x              ; damage * factor / 16, rounded
         sta t1
+        cmp #17
+        bcc +
+        inc tr_pos                      ; (a bonus)
++
         lda #8
         sta t2
         lda #0
@@ -1858,11 +1944,8 @@ flag_tick
         and #16
         beq +
         lda #1
-+       cmp flag_frame
-        beq +
-        sta flag_frame
-        jmp compose_flag
-+       rts
++       sta flag_frame                  ; (bitmap_draw shows it)
+        rts
 
 ; C set if the sprites must be listed again: the logic ran (they moved), a
 ; key is down (the cursor), or the cursor blinks
@@ -1885,6 +1968,7 @@ _yes    lda frame
         rts
 
 ticks_run       .byte 0
+kb_frame        .byte 0
 blink_was       .byte 0
 
 ; the sprite objects of this frame: the cursor, the invaders (from a
@@ -2022,7 +2106,12 @@ banner_show
         ; (on to banner_draw)
 
 banner_draw
-        jsr shots_erase
+        ldy #BAN_ROW                    ; nothing drawn over its rows
+        jsr strip_clear
+        iny
+        jsr strip_clear
+        iny
+        jsr strip_clear
         lda #PF_ROW+BAN_ROW
         sta t0
         lda #3
@@ -2102,7 +2191,6 @@ banner_clear
 +       lda #0
         sta ban_on
         sta ban_timer
-        jsr shots_erase
         ldy #BAN_ROW
 _r      ldx #0
 -       stx t6

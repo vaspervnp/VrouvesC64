@@ -388,23 +388,6 @@ def sprite_data():
     dark = [1 if g.luma(c) < 100 and not nm.startswith("cursor") else 0 for c, (nm, _) in zip(cols, sprites)]
     G.append("spr_dark")
     G += db(dark)
-    G.append("; 4 pixels of a multicolour sprite -> the pixels shown dark, bright:")
-    G.append("; own colour bright (tables 0, 1), own colour dark (2, 3)")
-    G.append("        .align 256")
-    G.append("mask_tabs")
-    for own_dark in (0, 1):
-        for want in ("d", "b"):
-            tab = []
-            for b in range(256):
-                m = 0
-                for i in range(4):
-                    c = b >> (6 - 2 * i) & 3
-                    is_d = c == 1 or (c == 2 and own_dark)
-                    is_b = c == 3 or (c == 2 and not own_dark)
-                    if (want == "d" and is_d) or (want == "b" and is_b):
-                        m |= 3 << (6 - 2 * i)
-                tab.append(m)
-            G += db(tab)
     # per enemy type, direction (down, left, right) and frame
     order = ["drone_a", "drone_b"] * 3 + ["guard_a", "guard_b", "guard_am", "guard_bm", "guard_a", "guard_b",
                                           "tank_va", "tank_vb", "tank_lam", "tank_lbm", "tank_la", "tank_lb"]

@@ -59,7 +59,9 @@ Easy 4, Medium 3, Hard 2, Hardest none).
 
 ## The game
 
-Everything about the rules is the CPC's, tick for tick (see its [README](../VrouvesCPC/README.md)):
+Everything about the rules is the CPC's, tick for tick (see its [README](../VrouvesCPC/README.md)),
+but for one: at most three defenders on the stage have a neighbour's bonus at a time (the ones built
+first). The rest:
 six defenders that join the village stage by stage (Cretan, Psssst, Yiayia, Bride, Baker, Cauldron),
 neighbours that hit harder or softer side by side, three invaders (bio-drones that fly over the walls,
 armoured guards, tanks that dent cauldrons), ten waves a stage, the score, the lives, the high score
@@ -80,16 +82,17 @@ table, and the feast at the school when the last stage is won.
 - **Hardware sprites for everything that moves**: the invaders (all their frames, mirrored for walking
   left), the effects and the cursor, through a **sprite multiplexer** (`src/mux.asm`, `src/irq.asm`).
   The objects are sorted by Y each frame and each goes to the sprite that has been free the longest;
-  the raster interrupts move the sprites down the screen as their last object ends. The order is the
-  same every frame, so in a crowd of more than eight on the same lines the same ones keep their
-  sprites, and the rest are drawn into the bitmap instead, in the darkest and brightest colours of the
-  cells under them: no flicker.
+  the raster interrupts move the sprites down the screen as their last object ends. The cursor has
+  a sprite of its own. The order is the same every frame, so in a crowd of more than seven on the same
+  lines the same ones keep their sprites, and the rest are drawn into the bitmap instead, in the
+  darkest and brightest colours of the cells under them.
 - **The shots** are too many for the sprites: they are drawn straight into the bitmap in the brightest
-  colour of the cell they cross. The bytes under shots and drawn objects are kept and put back before
-  the next pass (`src/shots.asm`).
-- **The logic runs at 25 Hz** as on the CPC (a tick every two frames, at most two ticks per pass of
-  the loop), so the pace is the same whatever the drawing takes; the sprites and the input run at up to
-  50 Hz.
+  colour of the cell they cross. The bitmap is done a cell row at a time, each while the raster is
+  away from it: what was drawn there is put back and drawn anew, so a row shows the old picture or
+  the new one and nothing flickers (`src/shots.asm`).
+- **The game runs as on the CPC**: a pass of the loop every four frames (12.5 a second), two ticks
+  of the logic (25 Hz) in each. A pass that takes longer makes the next one start at once. The keys
+  are read every frame between passes, so a short press is not missed.
 - **SID music**: the CPC's tune (D minor) arranged for the SID — lead, bass through the filter, drums
   and chords — and a calm title tune of the same melody, with the CPC's effects on voice 3
   (`music/*.txt`, compiled by `tools/mkmusic64.py`; the player is the one of the C64 Sugar Byte and

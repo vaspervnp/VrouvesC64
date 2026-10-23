@@ -51,9 +51,31 @@ hud_refresh
 +       lsr hud_cur
         bcc +
         jsr hud_top
++       lsr hud_cur
+        bcc +
+        jsr hud_score
 +       rts
 
 hud_cur         .byte 0
+hud_scol        .byte 0                 ; the score's column
+
+; the score again, in the top bar (not under a message)
+hud_score
+        lda msg_on
+        bne +
+        lda #1
+        sta txt_row
+        lda hud_scol
+        ldx #COL_WHITE
+        ldy #COL_BLACK
+        jsr hud_at
+        lda score
+        sta num
+        lda score+1
+        sta num+1
+        lda #5
+        jmp print_num
++       rts
 
 ; X = letters, Y = background, A = column, txt_row: ready to print
 hud_at  sta txt_col
@@ -102,6 +124,8 @@ _title  lda #0
         jsr hud_at
         lda #S_SCORE
         jsr print_id
+        lda txt_col
+        sta hud_scol
         lda score
         sta num
         lda score+1
@@ -319,10 +343,14 @@ syn_hud
         lda syn_text-1,x
         sta t5
         pla
-        ldx #COL_LGREEN                 ; above 16 a bonus, below a penalty
+        ldx #TXT_RED                    ; above 16 a bonus, below a penalty
         cmp #17
-        bcs +
-        ldx #TXT_RED
+        bcc +
+        jsr syn_count                   ; (grey: SYN_MAX have one already)
+        ldx #COL_LGREEN
+        cmp #SYN_MAX
+        bcc +
+        ldx #COL_GREY
 +       lda #36
         ldy #COL_BLACK
         jsr hud_at

@@ -2,6 +2,9 @@
 ; mux.asm - the sprite multiplexer's list: up to MAX_OBJ objects a frame on
 ; the eight hardware sprites.
 ;
+; ob_pin (the cursor) has sprite 7 to itself, so it never goes into the
+; bitmap; the others share sprites 0-6.
+;
 ; The objects (ob_y = the Y register, ob_x/ob_xh, ob_ptr, ob_col) are sorted
 ; by Y. Each one, in that order, goes to the sprite that has been free the
 ; longest: the first eight are set up by the frame's interrupt, every other
@@ -20,6 +23,8 @@ REUSE_GAP       = 3                     ; lines to move a sprite on
 obj_clear
         lda #0
         sta ob_n
+        lda #$ff
+        sta ob_pin
         rts
 
 ; A = Y register, X = x (two pixel units, 0-79), Y = sprite block,
@@ -126,7 +131,29 @@ _sorted
         inx
         cpx #8
         bne -
-        lda #0
+        ldx ob_pin                      ; the pinned one: sprite 7, all the frame
+        bmi _nopin
+        lda t6
+        clc
+        adc #7
+        tay
+        lda ob_y,x
+        sta fs_y,y
+        lda ob_x,x
+        sta fs_x,y
+        lda ob_ptr,x
+        sta fs_ptr,y
+        lda ob_col,x
+        sta fs_col,y
+        lda ob_xh,x
+        beq +
+        lda #$80
+        sta fs_msb_tmp
++       lda #$80
+        sta t7
+        lda #$ff
+        sta mx_free+7
+_nopin  lda #0
         sta t3                          ; t3 = the objects done
 _obj    lda t3
         cmp ob_n
@@ -134,7 +161,10 @@ _obj    lda t3
         jmp _done
 +       tay
         ldx ob_ord,y                    ; X = the object
-        ldy #0                          ; Y = the sprite free the longest
+        cpx ob_pin
+        bne +
+        jmp _skip
++       ldy #0                          ; Y = the sprite free the longest
         lda mx_free
         sta t2
         .for spr = 1, spr < 8, spr += 1

@@ -60,12 +60,12 @@ mux_end         .byte ?
 msb_shadow      .byte ?
 test_keys       .byte ?                 ; tests: $ff = none
 sp_ptr          .word ?                 ; the spawning: the next group
-svp             .word ?                 ; shots.asm: the next free record of save_buf
 dd_mp           .word ?                 ; shots.asm: an invader's masks,
 dd_d            .fill 3                 ; a line's dark and bright pixels,
 dd_b            .fill 3
 dd_pd           .fill 3                 ; the cells' dark and bright patterns
 dd_pb           .fill 3
+rp              .word ?                 ; shots.asm: a record being put back
         .endv
 
         .virtual WORK
@@ -117,6 +117,9 @@ f_x             .fill MAX_FX
 f_y             .fill MAX_FX
 f_t             .fill MAX_FX
 ENT_END
+t_pos           .fill MAX_TW            ; a defender's partner next door helps it,
+t_seq           .fill MAX_TW            ; the order they were built in (not cleared:
+                                        ; set while t_type is)
 ; sprite objects (mux.asm), then the lists for the IRQ, two of them
 ob_y            .fill MAX_OBJ
 ob_x            .fill MAX_OBJ
@@ -129,6 +132,7 @@ ob_line         .fill MAX_OBJ           ; sprite: for drawing it into the bitmap
 ob_spr          .fill MAX_OBJ
 ob_drop         .fill MAX_OBJ           ; no sprite for it this frame (mux_build)
 ob_n            .byte ?
+ob_pin          .byte ?                 ; the object with a sprite of its own (the cursor), or $ff
 dl_line         .fill 2*MAX_OBJ
 dl_spr          .fill 2*MAX_OBJ         ; the sprite * 2
 dl_x            .fill 2*MAX_OBJ
@@ -148,9 +152,27 @@ mx_free         .fill 8                 ; mux_build: where each sprite is free
 pix             .fill 32
 cnt             .fill 16
 mapc            .fill 16
-; the keys (input.asm): now, and the frame before
+; the keys (input.asm): this pass, the one before, down since then, read now
 keys            .fill KEY_ROWS
 kold            .fill KEY_ROWS
+kacc            .fill KEY_ROWS
+ktmp            .fill KEY_ROWS
+; shots.asm: the ring's next record, the strips' blocks and work, the objects
+rg_head         .byte ?
+st_start        .fill PF_ROWS+1
+st_end          .fill PF_ROWS+1
+st_work         .fill PF_ROWS
+bd_list         .fill MAX_OBJ
+; the flag's cells, in both frames (compose.asm): row, column; 8 bitmap bytes,
+; screen, colour
+fc_n            .byte ?
+fc_r0           .byte ?
+fc_r1           .byte ?
+fc_c0           .byte ?
+fc_c1           .byte ?
+fc_row          .fill FC_MAX
+fc_col          .fill FC_MAX
+fc_data         .fill FC_MAX * 20
 ; the game's variables, cleared by game_init
 GV_START
 funds           .word ?
@@ -188,6 +210,7 @@ tr_range        .byte ?
 tr_range2       .word ?
 tr_cd           .byte ?
 tr_dmg          .byte ?
+tr_pos          .byte ?                 ; syn_dmg: a bonus
 tr_flags        .byte ?
 tr_proj         .byte ?
 tr_sfx          .byte ?
@@ -201,6 +224,7 @@ end_wait        .byte ?
 ticks_due       .byte ?
 frame_acc       .byte ?
 flag_frame      .byte ?
+tw_seq          .byte ?                 ; the last t_seq given
 unlock          .byte ?                 ; the stage's defenders, a bit per type
 GV_END
 SSTATE                                  ; sound.asm's state

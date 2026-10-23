@@ -3,17 +3,40 @@
 ;
 ; keys+0..7 = the matrix rows (a bit set = a key down: key code row*8+bit),
 ; keys+8 = the joysticks (J_*), keys+9 = the cursor keys as four (C_*: up
-; and left with a shift). kold is the frame before: key_hit is a new press.
+; and left with a shift). kold is the pass before: key_hit is a new press.
+; The game's loop takes a pass every few frames and reads the keys every
+; frame between (kbd_scan): a pass sees what was down at any time since.
 ; A joystick in use hides the keyboard (its lines would show up as keys).
 ; Tests write test_keys (a key code, $ff = none) instead of pressing.
 ; =============================================================================
 
+; a pass: the keys down since the last one
 kbd_update
+        jsr kbd_scan
         ldx #KEY_ROWS-1
 -       lda keys,x
         sta kold,x
-        lda #0
+        lda kacc,x
         sta keys,x
+        lda #0
+        sta kacc,x
+        dex
+        bpl -
+        rts
+
+; the keys now, added to kacc
+kbd_scan
+        jsr _read
+        ldx #KEY_ROWS-1
+-       lda ktmp,x
+        ora kacc,x
+        sta kacc,x
+        dex
+        bpl -
+        rts
+_read   ldx #KEY_ROWS-1
+        lda #0
+-       sta ktmp,x
         dex
         bpl -
         lda test_keys
@@ -26,7 +49,7 @@ kbd_update
         and #7
         tay
         lda bit_tab,y
-        sta keys,x
+        sta ktmp,x
         rts
 _real   lda #$ff                        ; no row: the joysticks alone
         sta CIA1_PRA
@@ -34,7 +57,7 @@ _real   lda #$ff                        ; no row: the joysticks alone
         and CIA1_PRB                    ; port 1
         eor #$ff
         and #$1f
-        sta keys+8
+        sta ktmp+8
         bne _done
         ldx #7
         lda #$7f
@@ -43,23 +66,23 @@ _real   lda #$ff                        ; no row: the joysticks alone
         sta CIA1_PRA
         lda CIA1_PRB
         eor #$ff
-        sta keys,x
+        sta ktmp,x
         sec
         ror t0
         dex
         bpl -
         lda #$ff
         sta CIA1_PRA
-        lda keys+1                      ; a shift: left (row 1 bit 7), right (row 6 bit 4)
+        lda ktmp+1                      ; a shift: left (row 1 bit 7), right (row 6 bit 4)
         and #$80
         sta t0
-        lda keys+6
+        lda ktmp+6
         and #$10
         ora t0
         sta t0
         lda #0
         sta t1
-        lda keys                        ; CRSR right (bit 2), down (bit 7)
+        lda ktmp                        ; CRSR right (bit 2), down (bit 7)
         and #$04
         beq +
         lda #8                          ; C_RIGHT
@@ -68,7 +91,7 @@ _real   lda #$ff                        ; no row: the joysticks alone
         lda #4                          ; C_LEFT
 +
 +       sta t1
-        lda keys
+        lda ktmp
         and #$80
         beq +
         lda #2                          ; C_DOWN
@@ -77,7 +100,7 @@ _real   lda #$ff                        ; no row: the joysticks alone
         lda #1                          ; C_UP
 +
 +       ora t1
-        sta keys+9
+        sta ktmp+9
 _done   rts
 
 ; A = key code -> C set if down now.  Preserves X, Y.

@@ -18,7 +18,8 @@ compose_cell
         cmp #3
         bcs +
         rts
-+       stx cv_x
++       jsr strip_clear                 ; (nothing drawn over its row)
+        stx cv_x
         sty cv_y
         txa
         lsr a
@@ -382,13 +383,68 @@ compose_tile
         bcs -
         rts
 
-; the cells under the flag drawn again (its other frame)
+; the flag's cells in both its frames, kept for bitmap_draw (fc_*), and
+; the one of flag_frame on the screen
+flag_cache
+        lda flag_frame
+        pha
+        lda #1
+        sta flag_frame
+        jsr compose_flag
+        ldx #FC_MAX * 10
+        jsr _keep
+        lda #0
+        sta flag_frame
+        jsr compose_flag
+        ldx #0
+        jsr _keep
+        pla
+        sta flag_frame
+        sta flag_shown
+        beq +
+        jsr compose_flag
++       rts
+_keep   ldy #0                          ; X = where in fc_data
+-       sty t6
+        stx t7
+        ldx fc_col,y
+        lda fc_row,y
+        clc
+        adc #PF_ROW
+        tay
+        jsr cell_addr
+        ldx t7
+        ldy #0
+-       lda (bmp),y
+        sta fc_data,x
+        inx
+        iny
+        cpy #8
+        bne -
+        ldy #0
+        lda (scrp),y
+        sta fc_data,x
+        lda (colp),y
+        and #$0f
+        sta fc_data+1,x
+        inx
+        inx
+        ldy t6
+        iny
+        cpy fc_n
+        bne --
+        rts
+
+; the cells under the flag drawn again (fc_*: which they are)
 compose_flag
+        lda #0
+        sta fc_n
         lda flag_y                      ; the cell rows
         lsr a
         lsr a
         lsr a
         sta cv_r0
+        sta fc_r0
         lda flag_y
         clc
         adc #7
@@ -396,19 +452,30 @@ compose_flag
         lsr a
         lsr a
         sta cv_r1
-_fr     lda flag_x                      ; the cell columns: x/2 .. (x+3)/2
+        sta fc_r1
+        lda flag_x                      ; the cell columns: x/2 .. (x+3)/2
         lsr a
-        sta cv_c0
+        sta fc_c0
         lda flag_x
         clc
         adc #3
         lsr a
-        sta cv_c1
+        sta fc_c1
+_fr     lda fc_c0
+        sta cv_c0
 -       ldx cv_c0
         ldy cv_r0
+        txa
+        ldx fc_n
+        sta fc_col,x
+        tya
+        sta fc_row,x
+        inc fc_n
+        tax
+        ldx cv_c0
         jsr compose_cell
         inc cv_c0
-        lda cv_c1
+        lda fc_c1
         cmp cv_c0
         bcs -
         inc cv_r0

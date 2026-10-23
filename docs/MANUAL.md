@@ -105,9 +105,8 @@ is not grass, or you cannot afford the defender.
   lost. With a life left, one life goes and you play the same stage again from the start,
   with your score as it was when the stage began. With none left, the game is over and you go
   back to the title screen.
-* When many invaders crowd the same stretch of road, the C64 shows eight of them as sprites and
-  draws the rest into the picture, in two tones: nothing flickers, though the game may move a
-  little less smoothly while the crowd lasts.
+* When many invaders crowd the same stretch of road, the C64 shows some of them as sprites and
+  draws the rest into the picture, in two tones: nothing flickers.
 * Survive all ten waves and you move on to the next stage. Win the last one, and the vrouves
   are safe: the whole village celebrates at a feast in front of the school. Press SPACE /
   FIRE to go back to the title screen.
@@ -160,8 +159,11 @@ next to its partner – left, right, above or below, not diagonally – hits har
 | Baker | a Cretan | **–50%** |
 | Psssst | a Cretan | **–20%** |
 
+At most three defenders on the stage have a bonus at a time: the ones built first. A fourth
+fights at its own strength until one of the three is sold (penalties have no limit).
+
 Before you build, the info line shows the bonus the defender would get on the cursor cell:
-green for a bonus, red for a penalty.
+green for a bonus, red for a penalty, grey for a bonus that three others already have.
 
 ## The invaders
 

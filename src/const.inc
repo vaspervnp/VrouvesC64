@@ -80,8 +80,9 @@ MAX_FX          = 8
 MAX_OBJ         = 32                    ; hardware sprite objects a frame
 EMASK           = $0400                 ; the invaders' masks (shots.asm, made at start)
 SWAPTAB         = $0700                 ; a byte's two halves swapped
-MAX_SAVE        = 160                   ; bitmap bytes kept under the shots
-DS_MAX          = 156                   ; and lines under the objects without a sprite
+SYN_MAX         = 3                     ; defenders with a neighbour bonus, at most
+FC_MAX          = 6                     ; the flag's cells (3 x 2 at most)
+PASS_FRAMES     = 4                     ; a pass of the game's loop: 12.5 a second
 
 ET_DRONE        = 1
 ET_GUARD        = 2
@@ -107,8 +108,8 @@ FX_BOOM         = 5
 FX_ZAP          = 6
 
 TARGET_BUDGET   = 4
-REP_FIRST       = 12                    ; the cursor's repeat, in passes of the loop
-REP_NEXT        = 3
+REP_FIRST       = 4                     ; the cursor's repeat, in passes of the loop
+REP_NEXT        = 1
 
 HUDF_WAVE       = 1
 HUDF_INFO       = 2
@@ -116,6 +117,7 @@ HUDF_STATUS     = 4
 HUDF_FUNDS      = 8
 HUDF_HP         = 16
 HUDF_TOP        = 32
+HUDF_SCORE      = 64                    ; the score alone (the top bar takes long)
 
 FIRST_COUNTDOWN = 45
 NEXT_COUNTDOWN  = 15

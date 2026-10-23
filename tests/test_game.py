@@ -45,6 +45,24 @@ class GameTest(unittest.TestCase):
         self.assertEqual(vm.peek16("score"), 0)
         self.assertEqual(vm.peek8(cmap + 2 * 20 + 4), 0)
 
+    def test_three_bonuses_at_most(self):
+        vm = self.vm
+        set_funds(vm, 9000)
+        vm.poke("unlock", 0x3f)
+        cmap = vm.peek(vm.labels["cmap"], 20 * 14)
+        grass = lambda c, r: 0 <= c < 20 and 0 <= r < 14 and cmap[r * 20 + c] == 0
+        c, r = next((c, r) for r in range(1, 13) for c in range(1, 19)
+                    if all(grass(c + dc, r + dr) for dc, dr in ((0, 0), (-1, 0), (1, 0), (0, -1), (0, 1))))
+        build(vm, 1, c, r)                                          # a cretan
+        around = ((c - 1, r), (c + 1, r), (c, r - 1), (c, r + 1))
+        for cc, rr in around:
+            build(vm, 3, cc, rr)                                    # brides: +50% next to it
+        self.assertEqual(list(vm.peek("t_type", 5)), [1, 3, 3, 3, 3])
+        self.assertEqual(list(vm.peek("t_dmg", 5)), [6, 6, 6, 6, 4])   # the fourth: none
+        move_to(vm, *around[0])
+        press(vm, "S")                                              # one sold: the fourth has it
+        self.assertEqual(list(vm.peek("t_dmg", 5))[2:], [6, 6, 6])
+
     def test_cannot_build(self):
         vm = self.vm
         move_to(vm, 2, 1)                                           # the road

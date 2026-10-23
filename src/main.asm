@@ -189,12 +189,11 @@ data_end
 
 ; workspace after the program (not in the file)
         .virtual data_end
-save_buf        .fill MAX_SAVE * 3      ; shots.asm: address, old value
-ds_lo           .fill DS_MAX            ; and the objects' lines
-ds_hi           .fill DS_MAX
-ds_b0           .fill DS_MAX
-ds_b1           .fill DS_MAX
-ds_b2           .fill DS_MAX
+rg_lo           .fill 256               ; shots.asm: the ring of line records
+rg_hi           .fill 256
+rg_b0           .fill 256
+rg_b1           .fill 256
+rg_b2           .fill 256
 cell_codes      .fill PF_ROWS * 40      ; compose.asm: each cell's darkest, brightest code
 LOW_END
         .endv
