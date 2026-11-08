@@ -338,9 +338,9 @@ syn_hud
         jsr syn_find
         bcs +
         rts
-+       lda syn_factor-1,x
++       lda syn_factor,x
         pha
-        lda syn_text-1,x
+        lda syn_text,x
         sta t5
         pla
         ldx #TXT_RED                    ; above 16 a bonus, below a penalty

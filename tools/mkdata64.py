@@ -109,32 +109,40 @@ def font_data():
 
 # ------------------------------------------------------------------ stages
 def stage_data():
-    """-> (gfx lines, stage lines, built info)"""
-    tiles, tile_list = {}, []
-
-    def tid(tb):
-        if tb not in tiles:
-            tiles[tb] = len(tile_list)
-            tile_list.append(tb)
-        return tiles[tb]
-
+    """-> (gfx lines, built info).  A stage's tiles and maps are packed (lz.asm)
+    and unpacked into st_buf when it is loaded. The tiles of three stages or
+    more stay unpacked, for them all: tile numbers below NUM_COMMON are those,
+    the others the stage's own."""
     def cell_pens(cv, c, r):
         rows = [cv.p[r * 12 + y][c * 8:c * 8 + 8] for y in range(12)]
         return tuple(nib_bytes(rows))
 
-    built = []
+    pics = []
     for k, st in enumerate(world.STAGES):
         grid = world.carve_path(st.map, st.ground)
-        full = world.render_background(st, grid, True)
-        empty = world.render_background(st, grid, False)
-        local, lmap, tmap, cmap = {}, [], [], []
+        if st.ground2:
+            grid = world.carve_path(grid, st.ground2)
+        pics.append((grid, world.render_background(st, grid, True), world.render_background(st, grid, False)))
+    uses = {}
+    for k, (grid, full, empty) in enumerate(pics):
+        seen = {cell_pens(full, c, r) for r in range(world.MH) for c in range(world.MW)}
+        seen |= {cell_pens(empty, c, r) for (c, r) in world.STAGES[k].sacks}
+        for tb in seen:
+            uses[tb] = uses.get(tb, 0) + 1
+    common = sorted((tb for tb, n in uses.items() if n >= 3), key=lambda tb: -uses[tb])
+    common_id = {tb: i for i, tb in enumerate(common)}
+
+    built = []
+    for k, st in enumerate(world.STAGES):
+        grid, full, empty = pics[k]
+        own, tmap, cmap = {}, [], []
 
         def lid(tb):
-            gi = tid(tb)
-            if gi not in local:
-                local[gi] = len(lmap)
-                lmap.append(gi)
-            return local[gi]
+            if tb in common_id:
+                return common_id[tb]
+            if tb not in own:
+                own[tb] = len(common) + len(own)
+            return own[tb]
         for r in range(world.MH):
             for c in range(world.MW):
                 tmap.append(lid(cell_pens(full, c, r)))
@@ -147,7 +155,7 @@ def stage_data():
             assert f != e
             sacks += [c, r, f, e]
         paths = []
-        for wps in (st.ground, st.air):
+        for wps in (st.ground, st.air) + ((st.ground2,) if st.ground2 else ()):
             segs = []
             for (a_, b_) in zip(wps, wps[1:]):
                 (c0, r0), (c1, r1) = a_, b_
@@ -170,26 +178,30 @@ def stage_data():
             for (dx, dy, n) in segs:
                 data += [dx & 0xFF, dy & 0xFF, n]
             paths.append(data + [0, 0, 0])
+        road2 = 0
+        if st.ground2:      # after the first road, at a whole segment: the invader's
+            pg = paths[0] + [0] * (-len(paths[0]) % 3)      # e_seg finds it
+            road2 = len(pg) // 3
+            paths[0] = pg + paths.pop()
+            assert 4 + 3 * (len(paths[0]) // 3) < 256
+        assert len(common) + len(own) <= 96
+        blob = bytes(tmap) + bytes(cmap) + bytes(b for tb in own for b in tb)
         waves = getattr(world, st.waves)
-        built.append(dict(tmap=tmap, cmap=cmap, lmap=lmap, sacks=sacks, flag=st.flag,
+        built.append(dict(blob=blob, packed=lz.pack(blob), sacks=sacks, flag=st.flag, road2=road2,
                           pg=paths[0], pa=paths[1], waves=waves, grid=grid, full=full))
-        print("stage %d: %d tiles" % (k + 1, len(lmap)))
-    print("all stages: %d tiles, %d bytes" % (len(tile_list), 48 * len(tile_list)))
-    G = ["; the tiles of every stage: 8 x 12 pixels, CPC pens two a byte", "tiles"]
-    for tb in tile_list:
+        print("stage %d: %d tiles of its own, %d bytes packed to %d" % (k + 1, len(own), len(blob), len(built[-1]["packed"])))
+    print("tiles for all: %d; packed in all: %d" % (len(common), sum(len(b["packed"]) for b in built)))
+    G = ["; the tiles of three stages or more: 8 x 12 pixels, CPC pens two a byte", "tiles"]
+    for tb in common:
         G += db(tb, 24)
-    G.append("NUM_TILES = %d" % len(tile_list))
+    G.append("NUM_COMMON = %d" % len(common))
     return G, built
 
 
 def unlocks(ids):
     out = []
-    for k in range(len(world.STAGES)):
-        if k < len(world.UNLOCKS):
-            types, l1, l2 = world.UNLOCKS[k]
-            ann = [ids.index(l1), ids.index(l2)]
-        else:
-            types, ann = {1, 2, 3, 4, 5, 6}, [0xFF, 0xFF]
+    for k, (types, ann) in enumerate(world.UNLOCKS):
+        ann = [ids.index(a) for a in ann] if ann else [0xFF, 0xFF]
         out.append([sum(1 << (t - 1) for t in types)] + ann + [world.STAGES[k].toughness])
     return out
 
@@ -199,12 +211,13 @@ def stage_asm(built, ids, stage_str_lbl):
     S.append("NUM_STAGES = %d" % len(built))
     S.append("NUM_WAVES = %d" % len(world.WAVES1))
     S.append("NUM_SACKS = 5")
-    S.append("MAX_LTILES = %d" % max(len(b["lmap"]) for b in built))
+    S.append("ST_BUF_SIZE = %d" % max(len(b["blob"]) for b in built))
     un = unlocks(ids)
-    for part in ("tmap", "cmap", "lmap", "sacks", "pg", "pa", "waves"):
+    for part in ("pack", "sacks", "pg", "pa", "waves"):
         S.append("st_%s_lo .byte %s" % (part, ",".join("<st%d_%s" % (k, part) for k in range(len(built)))))
         S.append("st_%s_hi .byte %s" % (part, ",".join(">st%d_%s" % (k, part) for k in range(len(built)))))
-    S.append("st_nltiles .byte %s" % ",".join(str(len(b["lmap"])) for b in built))
+    S.append("; the second road: its first segment in the ground path, 0 for none")
+    S.append("st_road2 .byte %s" % ",".join(str(b["road2"]) for b in built))
     S.append("; the flag: x (two pixel units), y (lines)")
     S.append("st_flag_x .byte %s" % ",".join(str(b["flag"][0]) for b in built))
     S.append("st_flag_y .byte %s" % ",".join(str(b["flag"][1]) for b in built))
@@ -213,12 +226,8 @@ def stage_asm(built, ids, stage_str_lbl):
         S.append("st_%s .byte %s" % (nm, ",".join(str(u[i]) for u in un)))
     for k, b in enumerate(built):
         S.append("")
-        S.append("st%d_tmap" % k)
-        S += db(b["tmap"], 20)
-        S.append("st%d_cmap" % k)
-        S += db(b["cmap"], 20)
-        S.append("st%d_lmap         ; the tiles it uses" % k)
-        S.append("        .word " + ",".join("tiles+%d" % (48 * gi) for gi in b["lmap"]))
+        S.append("st%d_pack         ; packed: tile map, cell map, its own tiles" % k)
+        S += db(b["packed"], 24)
         S.append("st%d_sacks        ; col, row, tile with the sack, without" % k)
         S += db(b["sacks"], 20)
         S.append("st%d_pg           ; the ground path: x, y, sub, steps left, then (dx, dy, n)..." % k)
@@ -366,7 +375,7 @@ def sprite_data():
         ("tank_lam", art.mirror(A.TANK_L_A)), ("tank_lbm", art.mirror(A.TANK_L_B)),
         ("spark_a", A.SPARK), ("spark_b", A.SPARK_B), ("puff_a", A.PUFF_A), ("puff_b", A.PUFF_B),
         ("bash_a", A.BASH_A), ("bash_b", A.BASH_B), ("poof_a", A.POOF_A), ("poof_b", A.POOF_B),
-        ("boom_a", A.BOOM_A), ("boom_b", A.BOOM_B), ("zap_a", A.ZAP_A),
+        ("boom_a", A.BOOM_A), ("boom_b", A.BOOM_B), ("zap_a", A.ZAP_A), ("note_a", A.NOTE_A), ("note_b", A.NOTE_B),
         ("cursor_ok", A.CURSOR_OK), ("cursor_okb", A.CURSOR_OK_B), ("cursor_bad", A.CURSOR_BAD),
     ]
     own = {"cursor_ok": g.WHITE, "cursor_okb": g.YELLOW, "cursor_bad": g.LIGHT_RED}
@@ -408,7 +417,7 @@ def overlay_data():
     """defenders and the flag, CPC pens two a byte (0 clear), for compose.asm"""
     G = ["; defenders (8 x 12) and the flag (8 x 8): pens two a byte, 0 clear"]
     for nm, rows in (("cretan", art.CRETAN), ("yiayia", art.YIAYIA), ("bride", art.BRIDE),
-                     ("psssst", art.PSSSST), ("cauldron", art.CAULDRON), ("baker", art.BAKER),
+                     ("psssst", art.PSSSST), ("cauldron", art.CAULDRON), ("baker", art.BAKER), ("lyra", art.LYRA),
                      ("cauldron_x", art.CAULDRON_CRUSHED), ("flag_a", art.FLAG_A), ("flag_b", art.FLAG_B)):
         rows = [r.ljust(8, '.') for r in rows]
         G.append("ov_%s" % nm)
@@ -445,7 +454,7 @@ def icons():
     """the defenders' and invaders' pictures on the title pages: 3 x 2 cells,
     a patch of grass with the figure, bitmap (48), screen (6), colour (6)"""
     G = ["; title page pictures: 3 x 2 cells each: bitmap 48, screen 6, colour 6"]
-    figs = [art.CRETAN, art.YIAYIA, art.BRIDE, art.PSSSST, art.CAULDRON, art.BAKER,
+    figs = [art.CRETAN, art.YIAYIA, art.BRIDE, art.PSSSST, art.CAULDRON, art.BAKER, art.LYRA,
             art.DRONE_A, art.GUARD_A, art.TANK_V_A]
     G.append("icons")
     for rows in figs:
@@ -573,8 +582,8 @@ def ending():
     def bold(im):
         im = ImageEnhance.Color(im).enhance(1.3)
         return ImageEnhance.Contrast(im).enhance(1.1)
-    # the Blender render (tools/ending_blender.py), not the CPC's dithered screen
-    im = load_rgb(os.path.join(ROOT, "assets", "ending_scene.png"), 160, 200, bold)
+    # the wedding, the Blender render (tools/wedding_blender.py), not the CPC's dithered screen
+    im = load_rgb(os.path.join(ROOT, "assets", "wedding_scene.png"), 160, 200, bold)
     bg, bmp, scr, col = picture(im, "ending", 0.45)
     # VR-ENDSCR for $c000: screen, colour, background; VR-ENDBMP for $e000: the
     # bitmap (with their load addresses, as files on the disk)

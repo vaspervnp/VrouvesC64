@@ -13,12 +13,14 @@ import art  # noqa: E402
 import c64gfx as g  # noqa: E402
 import world  # noqa: E402
 
-TYPES = {1: art.CRETAN, 2: art.YIAYIA, 3: art.BRIDE, 4: art.PSSSST, 5: art.CAULDRON, 6: art.BAKER}
+TYPES = {1: art.CRETAN, 2: art.YIAYIA, 3: art.BRIDE, 4: art.PSSSST, 5: art.CAULDRON, 6: art.BAKER, 7: art.LYRA}
 
 
 def expected(stage, towers=(), flag_b=False):
     st = world.STAGES[stage]
     grid = world.carve_path(st.map, st.ground)
+    if st.ground2:
+        grid = world.carve_path(grid, st.ground2)
     cv = world.render_background(st, grid, True)
     for kind, c, r in towers:
         cv.blit(TYPES[kind], c * 8, r * 12)
@@ -50,12 +52,12 @@ class ComposeTest(unittest.TestCase):
                 self.assertEqual(acol[i], col[i], where)
 
     def test_stages(self):
-        for stage in range(7):
+        for stage in range(len(world.STAGES)):
             with Vice() as vm:
                 start_game(vm, stage)
                 frames(vm, 2)
-                # the banner on rows 9-11 at the start (stages 1-5)
-                self.check(vm, stage, skip_rows=(9, 10, 11) if stage < 5 else ())
+                # the banner on rows 9-11 at the start, where it announces something
+                self.check(vm, stage, skip_rows=(9, 10, 11) if world.UNLOCKS[stage][1] else ())
 
     def test_defenders(self):
         towers = [(1, 4, 2), (4, 6, 5), (2, 9, 3), (3, 13, 5), (5, 10, 8), (6, 12, 11), (4, 15, 2)]

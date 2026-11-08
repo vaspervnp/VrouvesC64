@@ -16,7 +16,7 @@ class TapeTest(unittest.TestCase):
         with Vice(image=TAP, labels=LABELS) as vm:
             vm.run_to("title_frame", 3, timeout=1500)
             self.assertEqual(vm.peek8(0xd011) & 0x20, 0x20)
-            vm.poke("start_stage", 6)                       # the last stage, won at once
+            vm.poke("start_stage", 9)                       # the last stage, won at once
             vm.poke("test_keys", K["SPACE"])
             vm.run_to("frame_done", 1, timeout=120)
             vm.poke("test_keys", NONE)
@@ -27,7 +27,7 @@ class TapeTest(unittest.TestCase):
             vm.poke("en_count", 0)
             vm.poke("e_type", bytes(16))
             vm.run_to("end_game", 1, timeout=60)
-            vm.run_to("wait_frame", 50)
+            vm.run_to("wait_frame", 55)
             press(vm, "SPACE", at="wait_frame", frames=2)
             vm.run_to("wait_frame", 30, timeout=1500)       # the ending, from the tape
             want = open(os.path.join(ROOT_BUILD, "endbmp.prg"), "rb").read()

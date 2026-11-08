@@ -20,27 +20,30 @@ et_spd          .byte 20,9,7
 et_arm          .byte 0,2,4
 et_rew          .byte 3,4,10
 et_dmg          .byte 4,8,20
-; defenders (cretan, yiayia, bride, psssst, cauldron, baker)
-tt_cost         .byte 35,50,70,80,110,60
-tt_range        .byte 30,18,28,36,22,34
-tt_cd           .byte 18,22,6,10,32,36
-tt_dmg          .byte 6,14,4,5,8,16
-tt_air          .byte 1,0,1,1,0,1
-tt_proj         .byte PT_BULLET,0,PT_PISTOL,PT_LASER,0,PT_DAKOS
-tt_sfx          .byte SFX_RIFLE,SFX_BASH,SFX_PISTOL,SFX_LASER,SFX_PUFF,SFX_THROW
-tt_sell         .byte 17,25,35,40,55,30
-; the neighbour bonus: partner, damage factor in 16ths, its text
-syn_partner     .byte 0,TT_BAKER,TT_CRETAN,TT_CRETAN,0,TT_CRETAN
-syn_factor      .byte 0,19,24,13,0,8
-syn_text        .byte 0,T_SYN20P,T_SYN50P,T_SYN20M,0,T_SYN50M
+; defenders (cretan, yiayia, bride, psssst, cauldron, baker, lyra player)
+tt_cost         .byte 35,50,70,80,110,60,90
+tt_range        .byte 30,18,28,36,22,34,26
+tt_cd           .byte 18,22,6,10,32,36,26
+tt_dmg          .byte 6,14,4,5,8,16,4
+tt_air          .byte 1,0,1,1,0,1,1
+tt_proj         .byte PT_BULLET,0,PT_PISTOL,PT_LASER,0,PT_DAKOS,0
+tt_sfx          .byte SFX_RIFLE,SFX_BASH,SFX_PISTOL,SFX_LASER,SFX_PUFF,SFX_THROW,SFX_LYRA
+tt_sell         .byte 17,25,35,40,55,30,45
+; the neighbour bonus, in pairs (the first that applies counts): defender,
+; partner, damage factor in 16ths, its text
+SYN_PAIRS       = 6
+syn_type        .byte TT_YIAYIA,TT_BRIDE,TT_PSSSST,TT_BAKER,TT_LYRA,TT_LYRA
+syn_partner     .byte TT_BAKER,TT_CRETAN,TT_CRETAN,TT_CRETAN,TT_LYRA,TT_YIAYIA
+syn_factor      .byte 19,24,13,8,8,24
+syn_text        .byte T_SYN20P,T_SYN50P,T_SYN20M,T_SYN50M,T_SYN50M,T_SYN50P
 ; shots: speed across (pixels), down (lines)
 pr_sx           .byte 6,7,10,3
 pr_sy           .byte 9,10,15,5
 ; effects: frames a and b, lifetime
-fx_a            .byte SPR_SPARK_A,SPR_PUFF_A,SPR_BASH_A,SPR_POOF_A,SPR_BOOM_A,SPR_ZAP_A
-fx_b            .byte SPR_SPARK_B,SPR_PUFF_B,SPR_BASH_B,SPR_POOF_B,SPR_BOOM_B,SPR_SPARK_B
-fx_life         .byte 6,12,8,10,12,6
-sel_keys        .byte K_1,K_2,K_3,K_4,K_5,K_6
+fx_a            .byte SPR_SPARK_A,SPR_PUFF_A,SPR_BASH_A,SPR_POOF_A,SPR_BOOM_A,SPR_ZAP_A,SPR_NOTE_A
+fx_b            .byte SPR_SPARK_B,SPR_PUFF_B,SPR_BASH_B,SPR_POOF_B,SPR_BOOM_B,SPR_SPARK_B,SPR_NOTE_B
+fx_life         .byte 6,12,8,10,12,6,10
+sel_keys        .byte K_1,K_2,K_3,K_4,K_5,K_6,K_7
 sq_lo           .byte <(range(64) * range(64))
 sq_hi           .byte >(range(64) * range(64))
 
@@ -129,27 +132,37 @@ stage_load
         sta flag_x
         lda st_flag_y,x
         sta flag_y
-        lda st_lmap_lo,x
-        sta ptr
-        lda st_lmap_hi,x
+        lda st_pack_lo,x                ; its maps and tiles
+        sta src
+        lda st_pack_hi,x
+        sta src+1
+        lda #<st_buf
+        sta dst
+        lda #>st_buf
+        sta dst+1
+        jsr lz_unpack
+        lda #<tiles                     ; the tiles' addresses: those for all, then
+        sta ptr                         ; its own, after its maps
+        lda #>tiles
         sta ptr+1
-        lda st_nltiles,x
-        sta t0
         ldx #0
--       ldy #0
-        lda (ptr),y
-        sta tad_lo,x
-        iny
-        lda (ptr),y
-        sta tad_hi,x
-        lda ptr
-        clc
-        adc #2
+-       cpx #NUM_COMMON
+        bne +
+        lda #<(st_buf+2*NCELLS)
         sta ptr
-        bcc +
-        inc ptr+1
-+       inx
-        cpx t0
+        lda #>(st_buf+2*NCELLS)
+        sta ptr+1
++       lda ptr
+        sta tad_lo,x
+        clc
+        adc #48
+        sta ptr
+        lda ptr+1
+        sta tad_hi,x
+        adc #0
+        sta ptr+1
+        inx
+        cpx #96
         bne -
         rts
 
@@ -158,20 +171,18 @@ game_init
         lda #0                          ; nothing on show
         sta ob_n
         jsr mux_build_wait
-        ldx stage                       ; the maps as the stage starts:
-        lda st_tmap_lo,x                ; sacks back, no defenders
-        sta src
-        lda st_tmap_hi,x
+        lda #<st_buf                    ; the maps as the stage starts:
+        sta src                         ; sacks back, no defenders
+        lda #>st_buf
         sta src+1
         lda #<tmap
         sta dst
         lda #>tmap
         sta dst+1
         jsr copy_cells
-        ldx stage
-        lda st_cmap_lo,x
+        lda #<(st_buf+NCELLS)
         sta src
-        lda st_cmap_hi,x
+        lda #>(st_buf+NCELLS)
         sta src+1
         lda #<cmap
         sta dst
@@ -215,7 +226,7 @@ game_init
         .if DEBUG != 0
         lda #DEBUG-1                    ; -D DEBUG=n: at wave n, every defender
         sta wave_num
-        lda #$3f
+        lda #$7f
         sta unlock
         .else
         ldx stage                       ; the defender this stage brings
@@ -283,8 +294,8 @@ end_game
         jsr banner_show
         lda #SFX_WAVE
         jsr sfx_play
-        lda #40
-        sta end_wait
+        lda #50                         ; a second before fire counts: a SPACE meant
+        sta end_wait                    ; for building does not skip the banner
 _l      jsr wait_frame
         jsr kbd_update
         jsr hud_refresh
@@ -324,18 +335,25 @@ _keys   lda #K_L
         lda #K_ARROW
         jsr key_hit
         bcc _ne
-_stop   lda paused
+_stop   lda quit_ask
         beq +
-        lda #1                          ; RUN/STOP while paused: back to the title
+        lda #1                          ; RUN/STOP again: back to the title
         sta quit
         rts
-+       jsr toggle_pause
++       lda paused                      ; the first pauses and asks
+        bne +
+        jsr toggle_pause
++       lda #1
+        sta quit_ask
+        lda #B_QUIT
+        ldx #B_PAUSE2
+        jsr banner_show
 _ne     lda paused
         beq +
         rts
 +       jsr cursor_input
         ldx #0
--       lda sel_keys,x                  ; 1-6: a defender this stage has
+-       lda sel_keys,x                  ; 1-7: a defender this stage has
         jsr key_hit
         bcc _nk
         lda unlock
@@ -347,7 +365,7 @@ _ne     lda paused
         lda #HUDF_INFO
         jsr hud_set
 _nk     inx
-        cpx #6
+        cpx #7
         bne -
         jsr fire_hit
         bcc +
@@ -404,7 +422,9 @@ toggle_pause
         ldx #B_PAUSE2
         jsr banner_show
         jmp +
-_resume jsr banner_clear
+_resume lda #0                          ; and no more asking to quit
+        sta quit_ask
+        jsr banner_clear
 +       lda #HUDF_STATUS
         jmp hud_set
 
@@ -962,7 +982,20 @@ _got    ldy t0
         sta e_gen,x
         jsr enemy_path
         ldy #0
-        lda (ptr2),y
+        lda e_type,x                    ; every other walker takes the second road,
+        cmp #ET_DRONE                   ; if there is one
+        beq +
+        lda e_gen,x
+        lsr a
+        bcc +
+        ldy stage
+        lda st_road2,y
+        sta e_seg,x
+        sta t7
+        asl a
+        adc t7
+        tay                             ; (its header: just before its segments)
++       lda (ptr2),y
         sta e_x,x
         iny
         lda (ptr2),y
@@ -1341,6 +1374,9 @@ _fire   ldy iy
 +       cmp #TT_CAULDRON
         bne +
         jmp fire_cauldron
++       cmp #TT_LYRA
+        bne +
+        jmp fire_lyra
 +       lda t_type,y                    ; the bride: criticals
         cmp #TT_BRIDE
         bne _nc
@@ -1434,7 +1470,7 @@ syn_dmg
         jsr syn_find
         ldy t6
         bcc _x
-        lda syn_factor-1,x              ; damage * factor / 16, rounded
+        lda syn_factor,x                ; damage * factor / 16, rounded
         sta t1
         cmp #17
         bcc +
@@ -1464,19 +1500,28 @@ syn_dmg
         sta tr_dmg
 _x      rts
 
-; A = type, X = col, Y = row -> C set and X = type when a partner is next
+; A = type, X = col, Y = row -> C set and X = the pair when a partner is next
 ; door (left, right, above, below)
 syn_find
         sta t3
         stx t4
         sty t5
-        tax
-        lda syn_partner-1,x
+        ldx #0
+-       lda syn_type,x
+        cmp t3
         bne +
+        stx t2
+        lda syn_partner,x
+        sta t1
+        jsr _near
+        ldx t2
+        bcs _hit
++       inx
+        cpx #SYN_PAIRS
+        bne -
         clc
-        rts
-+       sta t1
-        ldy #MAX_TW-1
+_hit    rts
+_near   ldy #MAX_TW-1                   ; a defender of type t1 next door: C set
 _l      lda t_type,y
         cmp t1
         bne _n
@@ -1490,7 +1535,7 @@ _l      lda t_type,y
         bne _n
         lda t_row,y                     ; ...on the same row
         cmp t5
-        beq _hit
+        beq _yes
         bne _n
 _col    lda t_row,y
         sec
@@ -1498,13 +1543,12 @@ _col    lda t_row,y
         clc
         adc #1
         and #$fd
-        beq _hit
+        beq _yes
 _n      dey
         bpl _l
         clc
         rts
-_hit    ldx t3
-        sec
+_yes    sec
         rts
 
 ; Y = defender -> C set and X = the invader furthest along within reach
@@ -1653,6 +1697,39 @@ _l      lda e_type,x
         lda #FX_PUFF
         jsr spawn_fx
 +       lda #1
+        sta t2
+        lda tr_dmg
+        jsr damage_enemy
+_n      dex
+        bpl _l
+        rts
+
+; the lyra player: every invader in reach, walkers and drones, armour counting;
+; the drones slow down
+fire_lyra
+        lda #2                          ; notes over two at most
+        sta t5
+        ldx #MAX_EN-1
+_l      lda e_type,x
+        beq _n
+        ldy iy
+        jsr in_range
+        bcc _n
+        lda e_type,x
+        cmp #ET_DRONE
+        bne +
+        lda #30
+        sta e_slow,x
++       lda t5
+        beq +
+        dec t5
+        lda e_x,x
+        sta fx_px
+        lda e_y,x
+        sta fx_py
+        lda #FX_NOTE
+        jsr spawn_fx
++       lda #0
         sta t2
         lda tr_dmg
         jsr damage_enemy

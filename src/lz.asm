@@ -1,7 +1,7 @@
 ; =============================================================================
-; lz.asm - unpacks tools/lz.py's streams: $00-$7f n+1 literal bytes, $80-$fe
-; a copy of n-$7e bytes from 'offset' (two bytes) back in the output, $ff
-; the end.
+; lz.asm - unpacks tools/lz.py's streams: $00-$7f n+1 literal bytes, $80-$bf
+; a copy of n-$7e bytes from 1 + the next byte back in the output, $c0-$fe a
+; copy of n-$be bytes from 'offset' (two bytes) back, $ff the end.
 ; =============================================================================
 
 ; src = packed, dst = where to
@@ -22,12 +22,24 @@ _tok    jsr _get
 +       dex
         bne -
         beq _tok                        ; (always)
-_copy   sbc #$7e                        ; (C set) the length
+_copy   sta t2                          ; the length
+        and #$3f
+        clc
+        adc #2
         tax
         jsr _get
         sta t0
-        jsr _get
+        lda #0
         sta t1
+        bit t2
+        bvs _far
+        inc t0                          ; (near: offset - 1, up to 256)
+        bne _go
+        inc t1
+        bne _go                         ; (always)
+_far    jsr _get
+        sta t1
+_go
         lda dst                         ; ptr = dst - offset
         sec
         sbc t0

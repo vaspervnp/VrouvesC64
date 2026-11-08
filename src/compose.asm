@@ -84,7 +84,7 @@ _line   ldx cv_line
         tax
         lda t_dis,y
         beq +
-        ldx #7                          ; a dented cauldron
+        ldx #8                          ; a dented cauldron
 +       lda ov_lo-1,x
         sta optr
         lda ov_hi-1,x
@@ -502,6 +502,6 @@ flag_y          .byte 0
 ; div12, mod12x4: data/gfx.asm
 row_tm_lo       .byte <(tmap + range(NROW) * NCOL)
 row_tm_hi       .byte >(tmap + range(NROW) * NCOL)
-; the defenders' pictures by type (7: a dented cauldron)
-ov_lo           .byte <ov_cretan, <ov_yiayia, <ov_bride, <ov_psssst, <ov_cauldron, <ov_baker, <ov_cauldron_x
-ov_hi           .byte >ov_cretan, >ov_yiayia, >ov_bride, >ov_psssst, >ov_cauldron, >ov_baker, >ov_cauldron_x
+; the defenders' pictures by type (8: a dented cauldron)
+ov_lo           .byte <ov_cretan, <ov_yiayia, <ov_bride, <ov_psssst, <ov_cauldron, <ov_baker, <ov_lyra, <ov_cauldron_x
+ov_hi           .byte >ov_cretan, >ov_yiayia, >ov_bride, >ov_psssst, >ov_cauldron, >ov_baker, >ov_lyra, >ov_cauldron_x

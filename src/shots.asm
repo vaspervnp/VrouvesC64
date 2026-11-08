@@ -357,26 +357,13 @@ _r      rts
         sta src
         lda spr_src_hi,y
         sta src+1
-        lda #0
-        sta dd_fast
-        cpy #SPR_FIRST_FX               ; an invader: its masks are ready
-        bcs +
-        inc dd_fast
-        lda emask_lo,y
-        sta dd_mp
-        lda emask_hi,y
-        sta dd_mp+1
-+       lda spr_dark,y                  ; its own colour: dark or bright
+        lda spr_dark,y                  ; its own colour: dark or bright
         sta dd_dark
         lda dd_row
         asl a
         sta dd_srow
         adc dd_row
         sta dd_srow                     ; 3 bytes a sprite row
-        lda dd_row
-        asl a
-        asl a
-        sta dd_mrow                     ; 4 bytes a mask row
         lda ob_px,x                     ; pixel x = 2 * x: the column, and whether
         lsr a                           ; it starts half way into a byte
         sta dd_col
@@ -401,6 +388,29 @@ _r      rts
         asl a
         asl a
         sta dd_nbits                    ; (the record's count)
+        lda #0
+        sta dd_fast
+        cpy #SPR_FIRST_FX               ; an invader: its masks are ready
+        bcs _ready
+        inc dd_fast
+        lda dd_half
+        bne +
+        lda emask_lo,y                  ; 4 bytes a line
+        sta dd_mp
+        lda emask_hi,y
+        sta dd_mp+1
+        lda dd_row
+        asl a
+        asl a
+        bcc _mr                         ; (always)
++       lda emask2_lo,y                 ; 6 bytes a line, half way
+        sta dd_mp
+        lda emask2_hi,y
+        sta dd_mp+1
+        lda dd_srow
+        asl a
+_mr     sta dd_mrow
+_ready
         ldx bd_s                        ; the cells: their address, their colours
         jsr codes_row
         txa
@@ -436,6 +446,8 @@ _r      rts
 _line   lda dd_fast                     ; the masks for this line: dark (dd_d),
         beq _slow                       ; bright (dd_b)
         ldy dd_mrow                     ; an invader's: made at the start
+        lda dd_half
+        bne _half
         lda (dd_mp),y
         sta dd_d
         iny
@@ -447,34 +459,58 @@ _line   lda dd_fast                     ; the masks for this line: dark (dd_d),
         iny
         lda (dd_mp),y
         sta dd_b+1
-        lda #0
+        iny
+        sty dd_mrow
+        ora dd_b
+        ora dd_d
+        ora dd_d+1
+        bne _rec
+        beq _empty                      ; (always)
+_half   lda (dd_mp),y
+        sta dd_d
+        iny
+        lda (dd_mp),y
+        sta dd_d+1
+        iny
+        lda (dd_mp),y
         sta dd_d+2
+        iny
+        lda (dd_mp),y
+        sta dd_b
+        iny
+        lda (dd_mp),y
+        sta dd_b+1
+        iny
+        lda (dd_mp),y
         sta dd_b+2
-        beq _gotm                       ; (always)
+        iny
+        sty dd_mrow
+        ora dd_b+1
+        ora dd_b
+        ora dd_d+2
+        ora dd_d+1
+        ora dd_d
+        bne _rec
+        beq _empty                      ; (always)
 _slow   ldy dd_srow                     ; the others': from the sprite's two bytes
         lda (src),y
         sta t0
         iny
         lda (src),y
         sta t1
+        iny
+        iny
+        sty dd_srow
         jsr dd_masks
-_gotm   lda dd_mrow
-        clc
-        adc #4
-        sta dd_mrow
-        lda dd_srow
-        adc #3
-        sta dd_srow
-        lda dd_d                        ; nothing on this line?
+        lda dd_d
         ora dd_d+1
         ora dd_b
         ora dd_b+1
-        bne +
-        jmp _empty
-+       lda dd_half
-        beq +
+        beq _empty
+        lda dd_half
+        beq _rec
         jsr dd_shift
-+       ldx rg_head                     ; the line's record
+_rec    ldx rg_head                     ; the line's record
         lda bmp
         sta rg_lo,x
         lda bmp+1
@@ -487,23 +523,25 @@ _gotm   lda dd_mrow
         cmp #i+1
         bcc _kept
         .endif
-        lda dd_d+i                      ; t5 = the pixels' colours, t4 = the rest kept
+        ldy #i * 8                      ; the byte kept
+        lda (bmp),y
+        sta rg_b0+i*256,x
+        sta t5
+        lda dd_d+i                      ; nothing of it here: as it was
+        ora dd_b+i
+        beq +
+        eor #$ff
+        and t5                          ; the rest of it,
+        sta t5
+        lda dd_d+i                      ; and the pixels' colours
         and dd_pd+i
+        ora t5
         sta t5
         lda dd_b+i
         and dd_pb+i
         ora t5
-        sta t5
-        lda dd_d+i
-        ora dd_b+i
-        eor #$ff
-        sta t4
-        ldy #i * 8
-        lda (bmp),y
-        sta rg_b0+i*256,x
-        and t4
-        ora t5
         sta (bmp),y
++
         .endfor
 _kept   inc rg_head
 _empty  inc bmp                         ; the next line (in the same cell)
@@ -759,8 +797,9 @@ dd_sh   ldy dd_d+1,x
         sta dd_d+1,x
         rts
 
-; at the start: SWAPTAB, and the invaders' masks for every line (EMASK:
-; 12 lines of dark, dark, bright, bright per sprite)
+; at the start: SWAPTAB, and the invaders' masks for every line: EMASK, 12
+; lines of dark x 2, bright x 2 per sprite; EMASK2, two pixels on, of dark x 3,
+; bright x 3
 masks_init
         ldx #0
 -       txa
@@ -783,6 +822,10 @@ masks_init
         sta dd_mp
         lda #>EMASK
         sta dd_mp+1
+        lda #<EMASK2
+        sta rp
+        lda #>EMASK2
+        sta rp+1
         ldx #0                          ; X = the sprite
 _spr    lda spr_src_lo,x
         sta src
@@ -818,12 +861,24 @@ _spr    lda spr_src_lo,x
         sta dd_mp
         bcc +
         inc dd_mp+1
++       jsr dd_shift                    ; and two pixels on
+        ldy #5
+-       lda dd_d,y
+        sta (rp),y
+        dey
+        bpl -
+        lda rp
+        clc
+        adc #6
+        sta rp
+        bcc +
+        inc rp+1
 +       lda dd_srow
         clc
         adc #3
         sta dd_srow
         cmp #12*3
-        bne -
+        bne --
         ldx dd_i
         inx
         cpx #SPR_FIRST_FX
@@ -833,6 +888,8 @@ _spr    lda spr_src_lo,x
 SPR_FIRST_FX    = SPR_SPARK_A           ; the invaders' sprites come first
 emask_lo        .byte <(EMASK + range(SPR_FIRST_FX) * 48)
 emask_hi        .byte >(EMASK + range(SPR_FIRST_FX) * 48)
+emask2_lo       .byte <(EMASK2 + range(SPR_FIRST_FX) * 72)
+emask2_hi       .byte >(EMASK2 + range(SPR_FIRST_FX) * 72)
         .cerror EMASK + SPR_FIRST_FX * 48 > SWAPTAB, "the masks run into SWAPTAB"
 
 dd_dark         .byte 0

@@ -1,7 +1,7 @@
 # LET'S GO FOR VROUVES / ΠΑΜΕ ΓΙΑ ΒΡΟΥΒΕΣ — Commodore 64
 
 A top-down tower defence game for the **Commodore 64** (PAL), written in **6510 assembly**. It is the
-C64 version of the [Amstrad CPC game](../VrouvesCPC): the same seven stages, waves, defenders, invaders,
+C64 version of the [Amstrad CPC game](../VrouvesCPC): the same ten stages, waves, defenders, invaders,
 rules, score, texts (English and Greek), graphics and music, rebuilt for the C64's hardware.
 
 Armed with EU Directive 8647/2026, Frankenstein & Moreau CO. send bio-drones, compliance squads and
@@ -45,11 +45,12 @@ long as the C64 is on. A red border: a block did not load; wind back a little an
 | Key | Action |
 | --- | --- |
 | Cursor keys (up / left with SHIFT) / Q A O P / joystick (port 2 or 1) | Move the build cursor |
-| 1 – 6 | Choose a defender |
+| 1 – 7 | Choose a defender |
 | SPACE / RETURN / FIRE | Build on the cursor tile |
 | S / DEL | Sell the defender under the cursor (half price back) |
 | N | Call the next wave now (half the seconds left on the countdown are paid as a bonus) |
-| H / RUN/STOP | Pause / continue (RUN/STOP while paused quits to the title) |
+| H | Pause / continue |
+| RUN/STOP | Quit to the title: it asks first, a second RUN/STOP quits (H continues) |
 | L | Switch English / Greek at any time |
 | M | Music on / off |
 
@@ -62,10 +63,11 @@ Easy 4, Medium 3, Hard 2, Hardest none).
 Everything about the rules is the CPC's, tick for tick (see its [README](../VrouvesCPC/README.md)),
 but for one: at most three defenders on the stage have a neighbour's bonus at a time (the ones built
 first). The rest:
-six defenders that join the village stage by stage (Cretan, Psssst, Yiayia, Bride, Baker, Cauldron),
+seven defenders that join the village stage by stage (Cretan, Psssst, Yiayia, Bride, Baker, Cauldron,
+and the Lyra player from stage 8; at the wedding, stage 10, the Bride is at the altar),
 neighbours that hit harder or softer side by side, three invaders (bio-drones that fly over the walls,
 armoured guards, tanks that dent cauldrons), ten waves a stage, the score, the lives, the high score
-table, and the feast at the school when the last stage is won.
+table, a stage with two roads (the olive press), and the Bride's wedding when the last stage is won.
 
 ## On the C64
 
@@ -73,6 +75,9 @@ table, and the feast at the school when the last stage is won.
   C64's multicolour one, so the CPC's playfield (20 × 14 tiles of 8 × 12), its HUD rows and its 3×6 font
   (a letter a 4 × 8 cell) are laid out the same. The CPC's 16 pens map to C64 colours
   (`tools/c64gfx.py`); the grass green is the background colour.
+- **Every stage in memory, packed**: a stage's maps and its own tiles are unpacked into `st_buf` when
+  it is loaded (`tools/lz.py`, `src/lz.asm`); the tiles of three stages or more stay unpacked, for
+  them all.
 - **The playfield is composed at run time** (`src/compose.asm`), cell by cell: the tile under the
   cell (CPC pens, two a byte), the defender standing there, the flag. A cell shows the background and
   three colours of its own: the 32 pixels' colours are counted, the three most common kept, and the
@@ -99,7 +104,7 @@ table, and the feast at the school when the last stage is won.
   Runner A.P.E.R).
 - **The high scores and the ending through the KERNAL**: the game leaves the KERNAL's memory
   ($90-$3ff) alone, so it can bank it in to load and save. The ending (the Blender render
-  `assets/ending_scene.png`) and the loading picture (`assets/vrouves.jpeg`) are dithered to the
+  `assets/wedding_scene.png`, `tools/wedding_blender.py`) and the loading picture (`assets/vrouves.jpeg`) are dithered to the
   C64's colours, cell by cell.
 
 ## Building
@@ -136,7 +141,7 @@ src/        6510 sources: main (memory map, start, the stages), irq (raster inte
 tools/      world.py (the stages, their art and renderers, the waves: the CPC's), art.py (the
             sprites), font.py, texts.py (all text, English and Greek), c64gfx.py (colours, cells,
             sprites), mkdata64.py (all the data), mkmusic64.py, lz.py, mktap.py, c64palette.py,
-            screenshots64.py; splash_blender.py, ending_blender.py, blender_toon.py (the
+            screenshots64.py; splash_blender.py, wedding_blender.py, blender_toon.py (the
             pictures' Blender scenes)
 music/      the SID tunes, instruments and effects
 assets/     the loading picture and the ending, their Blender scenes (from the CPC version)

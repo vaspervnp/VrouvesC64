@@ -15,7 +15,7 @@ def win_now(vm):
 
 def to_end_banner(vm):
     vm.run_to("end_game", 1, timeout=60)
-    vm.run_to("wait_frame", 50)
+    vm.run_to("wait_frame", 55)
 
 
 class GameTest(unittest.TestCase):
@@ -152,9 +152,67 @@ class GameTest(unittest.TestCase):
         cd = (vm.peek8("cd_sec"), vm.peek8("cd_sub"))
         frames(vm, 50)
         self.assertEqual((vm.peek8("cd_sec"), vm.peek8("cd_sub")), cd)
-        vm.poke("test_keys", 63)                # RUN/STOP while paused: the title
+        press(vm, "STOP")                       # RUN/STOP asks, and H plays on
+        self.assertEqual(vm.peek8("quit_ask"), 1)
+        press(vm, "H")
+        self.assertEqual((vm.peek8("paused"), vm.peek8("quit_ask")), (0, 0))
+        press(vm, "STOP")                       # playing: it pauses and asks
+        self.assertEqual((vm.peek8("paused"), vm.peek8("quit_ask"), vm.peek8("quit")), (1, 1, 0))
+        vm.poke("test_keys", 63)                # again: the title
         vm.run_to("title_frame", 1, timeout=120)
         vm.poke("test_keys", 0xFF)
+
+    def test_fire_counts_after_a_second(self):
+        vm = self.vm
+        win_now(vm)
+        vm.run_to("end_game", 1, timeout=60)
+        vm.poke("test_keys", 60)                # SPACE held, then let go: it does not count
+        vm.run_to("wait_frame", 30)
+        vm.poke("test_keys", 0xFF)
+        vm.run_to("wait_frame", 30)
+        self.assertEqual(vm.peek8("end_wait"), 0)
+        self.assertEqual(vm.peek8("stage"), 0)
+        vm.poke("test_keys", 60)
+        vm.run_to("frame_done", 1, timeout=120)
+        vm.poke("test_keys", 0xFF)
+        self.assertEqual(vm.peek8("stage"), 1)
+
+    def test_lyra_player(self):
+        vm = self.vm
+        set_funds(vm, 900)
+        vm.poke("unlock", 0x7f)
+        build(vm, 7, 10, 6)
+        self.assertEqual(funds(vm), 900 - 90)
+        self.assertEqual(vm.peek16("score"), 4)
+        self.assertEqual(list(vm.peek("t_dmg", 1)), [4])
+        tx, ty = vm.peek8("t_cx"), vm.peek8("t_cy")
+        # a drone and a guard next to him, a drone out of his reach
+        for i, (kind, hp, arm, x) in enumerate(((1, 50, 0, tx - 2), (2, 50, 2, tx - 2), (1, 50, 0, 2))):
+            for name, v in (("e_type", kind), ("e_hp", hp), ("e_arm", arm), ("e_x", x), ("e_y", ty),
+                            ("e_spd", 0), ("e_rem", 200), ("e_slow", 0)):
+                vm.poke(vm.labels[name] + i, bytes([v]))
+        vm.poke("en_count", 3)
+        vm.poke("t_cd", 1)
+        frames(vm, 8)
+        self.assertEqual(vm.peek8(vm.labels["e_hp"]), 46)           # 4
+        self.assertEqual(vm.peek8(vm.labels["e_hp"] + 1), 48)       # 4 - 2 of armour
+        self.assertEqual(vm.peek8(vm.labels["e_hp"] + 2), 50)
+        self.assertGreater(vm.peek8(vm.labels["e_slow"]), 0)        # the drone slows,
+        self.assertEqual(vm.peek8(vm.labels["e_slow"] + 1), 0)      # the guard does not
+
+    def test_lyra_neighbours(self):
+        vm = self.vm
+        set_funds(vm, 900)
+        vm.poke("unlock", 0x7f)
+        cmap = vm.peek(vm.labels["cmap"], 20 * 14)
+        grass = lambda c, r: 0 <= c < 20 and 0 <= r < 14 and cmap[r * 20 + c] == 0
+        c, r = next((c, r) for r in range(1, 13) for c in range(1, 18)
+                    if all(grass(c + d, r) for d in range(3)))
+        build(vm, 7, c + 1, r)
+        build(vm, 2, c, r)                                          # next to a yiayia: +50%
+        self.assertEqual(list(vm.peek("t_dmg", 2)), [6, 14])        # (she has nothing of him)
+        build(vm, 7, c + 2, r)                                      # and another: -50% counts
+        self.assertEqual(list(vm.peek("t_dmg", 3)), [2, 14, 2])
 
     def test_heavy_wave_keeps_pace(self):
         vm = self.vm
@@ -178,6 +236,46 @@ class GameTest(unittest.TestCase):
         self.assertEqual(vm.peek8("lang"), 1)
         press(vm, "L")
         self.assertEqual(vm.peek8("lang"), 0)
+
+
+class StagesTest(unittest.TestCase):
+    def test_second_road(self):
+        with Vice() as vm:
+            start_game(vm, 8)                                       # the olive press
+            road2 = vm.peek8(vm.labels["st_road2"] + 8)
+            self.assertGreater(road2, 0)
+            vm.poke("wave_num", 0)
+            vm.poke("cd_sec", 0)
+            vm.poke("cd_sub", 1)
+            seen = {}
+            for _ in range(400):
+                frames(vm, 1)
+                for i, t in enumerate(vm.peek("e_type", 16)):
+                    if t == 2:
+                        seen[vm.peek8(vm.labels["e_gen"] + i)] = vm.peek8(vm.labels["e_x"] + i)
+                if len(seen) >= 2:
+                    break
+            gens = sorted(seen)[:2]
+            self.assertGreaterEqual(len(gens), 2)
+            xs = {g & 1: seen[g] for g in gens}
+            self.assertLess(xs[0], 40)                              # one from the left,
+            self.assertGreater(xs[1], 40)                           # the next from the right
+
+    def test_no_bride_at_the_wedding(self):
+        with Vice() as vm:
+            start_game(vm, 9)
+            self.assertEqual(vm.peek8("unlock"), 0x7f & ~4)
+            press(vm, "3")
+            self.assertNotEqual(vm.peek8("sel_type"), 3)
+            press(vm, "7")
+            self.assertEqual(vm.peek8("sel_type"), 7)
+
+    def test_retry_restores_the_maps(self):
+        with Vice() as vm:
+            start_game(vm, 7)
+            want = vm.peek("tmap", 280)
+            self.assertEqual(vm.peek("cmap", 20), vm.peek("st_buf", 300)[280:])
+            self.assertEqual(want, vm.peek("st_buf", 280))
 
 
 if __name__ == "__main__":

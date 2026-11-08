@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from vice import Vice  # noqa: E402,F401
 
 K = {"SPACE": 60, "RETURN": 1, "N": 39, "S": 13, "H": 29, "L": 42, "M": 36, "D": 18,
-     "STOP": 63, "1": 56, "2": 59, "3": 8, "4": 11, "5": 16, "6": 19,
+     "STOP": 63, "1": 56, "2": 59, "3": 8, "4": 11, "5": 16, "6": 19, "7": 24,
      "UP": 72, "DOWN": 73, "LEFT": 74, "RIGHT": 75, "FIRE": 68, "J_RIGHT": 67}
 NONE = 0xFF
 ROOT_BUILD = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "build")
@@ -58,7 +58,7 @@ def move_to(vm, c, r):
 
 
 def build(vm, kind, c, r):
-    """defender kind (1-6) at (c, r)"""
+    """defender kind (1-7) at (c, r)"""
     move_to(vm, c, r)
     press(vm, str(kind))
     press(vm, "SPACE")

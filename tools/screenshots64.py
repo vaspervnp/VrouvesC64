@@ -26,6 +26,8 @@ def defence(stage, n=9):
     """grass cells beside the road, spread along it"""
     st = world.STAGES[stage]
     grid = world.carve_path(st.map, st.ground)
+    if st.ground2:
+        grid = world.carve_path(grid, st.ground2)
     cells = []
     for r in range(world.MH):
         for c in range(world.MW):
@@ -47,8 +49,8 @@ def defence(stage, n=9):
 
 def battle(vm, stage, lang=0):
     set_funds(vm, 3000)
-    vm.poke("unlock", 0x3f)
-    kinds = [1, 3, 2, 6, 4, 5, 1, 3, 6]
+    vm.poke("unlock", 0x7f)
+    kinds = [1, 3, 2, 6, 4, 5, 1, 3, 6] if stage < 7 else [1, 7, 2, 6, 4, 5, 1, 7, 6]
     for k, (c, r) in zip(kinds, defence(stage)):
         build(vm, k, c, r)
     vm.poke("wave_num", 6)
@@ -60,7 +62,7 @@ def battle(vm, stage, lang=0):
 
 def icons():
     figs = [("cretan", art.CRETAN), ("yiayia", art.YIAYIA), ("bride", art.BRIDE), ("psssst", art.PSSSST),
-            ("cauldron", art.CAULDRON), ("baker", art.BAKER), ("drone", art.DRONE_A), ("guard", art.GUARD_A),
+            ("cauldron", art.CAULDRON), ("baker", art.BAKER), ("lyra", art.LYRA), ("drone", art.DRONE_A), ("guard", art.GUARD_A),
             ("tank", art.TANK_V_A)]
     for name, rows in figs:
         cv = world.Canvas(12, 16, art.CH['g'])
@@ -78,7 +80,7 @@ def main():
         save(vm, "title_en.png")
         press(vm, "L", at="title_frame")
         save(vm, "title_gr.png")
-    for stage in range(7):
+    for stage in range(len(world.STAGES)):
         with Vice() as vm:
             start_game(vm, stage)
             battle(vm, stage)
@@ -88,7 +90,7 @@ def main():
                 press(vm, "L")
                 save(vm, "game_gr.png")
     shots = [Image.open(os.path.join(IMG, n)) for n in
-             ("title_en.png", "stage1.png", "stage3.png", "stage6.png", "stage7.png", "title_gr.png")]
+             ("title_en.png", "stage1.png", "stage3.png", "stage8.png", "stage10.png", "title_gr.png")]
     w, h = shots[0].size
     sheet = Image.new("RGB", (w * 3, h * 2))
     for i, im in enumerate(shots):

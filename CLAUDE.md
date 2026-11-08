@@ -13,7 +13,7 @@ and why.
 |---|---|
 | Two screens, dirty rectangles, a background copy, software sprites | One multicolour bitmap. Invaders, effects, cursor: hardware sprites through the multiplexer. Only cells change in the bitmap. |
 | Drawing at 12.5 fps, logic at 25 Hz | The same: `game_run` takes a pass every `PASS_FRAMES` (4) frames, two ticks in it. The keys are read every frame between (`kbd_scan`). |
-| Stages and title loaded from disk; code in screen tails | One PRG; every stage in memory (tiles deduplicated across stages). |
+| Stages and title loaded from disk; code in screen tails | One PRG; every stage in memory, packed: `stage_load` unpacks its maps and own tiles into `st_buf` (`tools/lz.py`, `lz.asm`). Tile numbers below `NUM_COMMON` are the tiles of three stages or more, kept unpacked. |
 | AY player | The SID player of Sugar Byte (`src/sound.asm`, `tools/mkmusic64.py`, `music/*.txt`). |
 
 ## Memory (`src/main.asm`, `src/const.inc`, `src/vars.inc`)
@@ -44,7 +44,7 @@ and why.
 
 ## Sprites (`mux.asm`, `irq.asm`)
 
-- `ob_pin` (the cursor) has sprite 0 to itself (in front of the others). The others: sorted by Y; each goes to the sprite free the longest, so the IRQ entries come in line
+- `ob_pin` (the cursor) has sprite 0 (in front of the others), free again only below it. The others: sorted by Y; each goes to the sprite free the longest, so the IRQ entries come in line
   order. A sprite is busy for 21 lines whatever it shows; reuse needs `REUSE_GAP` lines more.
 - `mux_build` builds the list not on show and sets `dl_ready`; the frame IRQ swaps. Never build
   while `dl_ready` is set.

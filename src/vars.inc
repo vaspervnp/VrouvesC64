@@ -189,6 +189,7 @@ en_count        .byte ?
 gen_ctr         .byte ?
 game_over       .byte ?                 ; 1 won, 2 lost
 quit            .byte ?
+quit_ask        .byte ?                 ; RUN/STOP has asked
 paused          .byte ?
 cur_c           .byte ?
 cur_r           .byte ?

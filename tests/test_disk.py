@@ -41,7 +41,7 @@ class DiskTest(unittest.TestCase):
             score = vm.peek16("score")
             vm.poke("hp", 0)
             vm.run_to("end_game", 1, timeout=60)
-            vm.run_to("wait_frame", 50)
+            vm.run_to("wait_frame", 55)
             press(vm, "SPACE", at="wait_frame", frames=2)
             vm.run_to("wait_frame", 20)                             # the name: B, A, A
             press(vm, "DOWN", at="wait_frame", frames=2)
@@ -51,7 +51,7 @@ class DiskTest(unittest.TestCase):
             entry = [2, 1, 1, score & 255, score >> 8]
             self.assertEqual(list(vm.peek("hs_table", 5)), entry)
             # the last stage won: the ending from the disk
-            vm.poke("start_stage", 6)
+            vm.poke("start_stage", 9)
             start(vm)
             vm.poke("wave_num", 10)
             vm.poke("wave_state", 1)
@@ -59,7 +59,7 @@ class DiskTest(unittest.TestCase):
             vm.poke("en_count", 0)
             vm.poke("e_type", bytes(16))
             vm.run_to("end_game", 1, timeout=60)
-            vm.run_to("wait_frame", 50)
+            vm.run_to("wait_frame", 55)
             press(vm, "SPACE", at="wait_frame", frames=2)
             want = open(os.path.join(ROOT_BUILD, "endbmp.prg"), "rb").read()[-8:]
             for _ in range(60):                                     # until it is all in
