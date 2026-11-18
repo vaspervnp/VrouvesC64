@@ -49,8 +49,10 @@ def defence(stage, n=9):
 
 def battle(vm, stage, lang=0):
     set_funds(vm, 3000)
-    vm.poke("unlock", 0x7f)
-    kinds = [1, 3, 2, 6, 4, 5, 1, 3, 6] if stage < 7 else [1, 7, 2, 6, 4, 5, 1, 7, 6]
+    vm.poke("unlock", 0xff)
+    vm.poke("unlock_hi", 1)
+    kinds = ([1, 3, 2, 6, 4, 5, 1, 3, 6] if stage < 7 else [1, 7, 2, 6, 4, 5, 1, 7, 6] if stage < 9
+             else [1, 8, 2, 6, 4, 5, 9, 7, 6])
     for k, (c, r) in zip(kinds, defence(stage)):
         build(vm, k, c, r)
     vm.poke("wave_num", 6)
@@ -62,7 +64,7 @@ def battle(vm, stage, lang=0):
 
 def icons():
     figs = [("cretan", art.CRETAN), ("yiayia", art.YIAYIA), ("bride", art.BRIDE), ("psssst", art.PSSSST),
-            ("cauldron", art.CAULDRON), ("baker", art.BAKER), ("lyra", art.LYRA), ("drone", art.DRONE_A), ("guard", art.GUARD_A),
+            ("cauldron", art.CAULDRON), ("baker", art.BAKER), ("lyra", art.LYRA), ("shepherd", art.SHEPHERD_T), ("priest", art.PRIEST_T), ("drone", art.DRONE_A), ("guard", art.GUARD_A),
             ("tank", art.TANK_V_A)]
     for name, rows in figs:
         cv = world.Canvas(12, 16, art.CH['g'])

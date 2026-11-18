@@ -1,5 +1,6 @@
 # LET'S GO FOR VROUVES - Commodore 64 build
-#   make            -> build/vrouves.d64 (disk) and build/vrouves.tap (tape)
+#   make            -> build/vrouves.d64 (disk) and build/vrouves.tap (tape): the game,
+#                      a file (a block) per stage, the ending
 #   make run        -> x64sc with the disk autostarted
 #   make test       -> headless tests (VICE binary monitor)
 #   make data       -> src/data/ from tools/ (world, art, texts) and music/
@@ -55,16 +56,21 @@ $(PRG): $(SRC) $(STAMP) | $(BUILD)
 $(BOOT): src/boot.asm $(PRG) $(BUILD)/splash.bin | $(BUILD)
 	$(TASS) $(TASSFLAGS) -D GAME_START=$$(printf %d 0x$$(awk '$$3 == ".start" {print $$2}' $(LABELS))) src/boot.asm -o $@
 
+# the stages: a file each (VR-S01...), loaded when the game reaches them
+STAGE_NUMS := 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20
+
 $(D64): $(PRG) $(BOOT)
 	rm -f $@
 	$(C1541) -format "vrouves,vr" d64 $@ \
 	    -write $(BOOT) vrouves \
 	    -write $(PRG) vr-game \
+	    $(foreach n,$(STAGE_NUMS),-write $(BUILD)/stages/s$(n).prg vr-s$(n)) \
 	    -write $(BUILD)/endscr.prg vr-endscr \
 	    -write $(BUILD)/endbmp.prg vr-endbmp >/dev/null
 
 # the cassette: the boot file at the KERNAL's speed, then in turbo the loading
-# picture, the game and the ending (the game reads it when it is reached)
+# picture, the game, the stages and the ending (the game reads each when it is
+# reached; a stage's block has its number as the entry)
 $(TPRG): $(SRC) $(STAMP) | $(BUILD)
 	mkdir -p $(BUILD)/tape
 	$(TASS) $(TASSFLAGS) $(TASSDEFS) -D TAPE=1 src/main.asm -o $@ --vice-labels-numeric -l $(TLABELS)
@@ -75,7 +81,9 @@ $(TBOOT): src/tapeboot.asm src/tape.asm | $(BUILD)
 
 $(TAP): $(TBOOT) $(TPRG) tools/mktap.py
 	$(PYTHON) tools/mktap.py $@ $(TBOOT) VROUVES $(BUILD)/splash.bin@0x2000 \
-	    $(TPRG)@0x$$(awk '$$3 == ".start" {print $$2}' $(TLABELS)) $(BUILD)/endscr.prg $(BUILD)/endbmp.prg
+	    $(TPRG)@0x$$(awk '$$3 == ".start" {print $$2}' $(TLABELS)) \
+	    $(foreach n,$(STAGE_NUMS),$(BUILD)/stages/s$(n).bin@0x$$(awk '$$3 == ".st_file" {print $$2}' $(TLABELS)),$(patsubst 0%,%,$(n))) \
+	    $(BUILD)/endscr.prg $(BUILD)/endbmp.prg
 
 $(BUILD)/endscr.prg $(BUILD)/endbmp.prg $(BUILD)/splash.bin: $(STAMP)
 

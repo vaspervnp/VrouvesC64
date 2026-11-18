@@ -26,22 +26,24 @@ RUN
 ```
 
 The loading picture shows while the game loads. Leave the disk in the drive and not write
-protected: the high scores are read from it and saved on it, and the picture of the ending is
-loaded from it after the last stage.
+protected: each stage is loaded from it when you reach it, the high scores are read from it and
+saved on it, and the picture of the ending is loaded from it after the last stage.
 
 ### On cassette
 
 Insert `vrouves.tap`, type `LOAD` (or press SHIFT and RUN/STOP) and press PLAY; then `RUN`. The
 loading picture appears and the game loads under it, the border flickering. Leave the tape in the
-deck and do not rewind it: the picture of the ending comes next on the tape and is read when you
-win the last stage; after it the computer starts again. The cassette version keeps the high
-scores only for as long as the computer is on. If the border turns red, a part did not load:
-wind the tape back a little and press PLAY again.
+deck with PLAY down and do not rewind it: each stage follows on the tape and loads when you
+reach it, and after the last one the picture of the ending. If you lose a stage with a life
+left, you play it again straight away, with no loading. After the ending, or a game that is over
+or that you quit, the computer starts again: load the tape from the start for a new game. The
+cassette version counts the score but keeps no table. If the border turns red, a part did not
+load: wind the tape back a little and press PLAY again.
 
 ## The title screen
 
 The title screen opens with a scene from the game and the main keys, then tells the story
-and shows the defenders, the invaders and the high scores.
+and shows the defenders (two pages), the invaders and the high scores.
 
 | Key | Action |
 | --- | --- |
@@ -80,7 +82,7 @@ The difficulty, shown under the title, sets how many lives you get for the whole
 | Key | Action |
 | --- | --- |
 | Cursor keys (up and left with SHIFT) / Q A O P / joystick in port 2 or 1 | Move the build cursor |
-| 1 – 7 | Choose a defender (only those you have in this stage) |
+| 1 – 9 | Choose a defender (only those you have in this stage) |
 | SPACE / RETURN / FIRE | Build the chosen defender on the cursor |
 | S / DEL | Sell the defender under the cursor |
 | N | Call the next wave now |
@@ -120,7 +122,7 @@ to the lives you have left (`SCORE 01903 LIVES 3`) whenever the bar has no messa
 | | Points |
 | --- | --- |
 | Every invader you stop | the damage it would have done: 4 for a drone, 8 for a guard, 20 for a tank |
-| Every defender you build | its damage: Cretan 6, Yiayia 14, Bride 4, Psssst 5, Cauldron 8, Baker 16, Lyra player 4 (taken away again if you sell it) |
+| Every defender you build | its damage: Cretan 6, Yiayia 14, Bride 4, Psssst 5, Cauldron 8, Baker 16, Lyra player 4, Shepherd 14, Priest 0 (taken away again if you sell it) |
 | Calling a wave early with N | every second still left on the countdown |
 | A stage won | every vrouve left in your funds |
 
@@ -137,9 +139,10 @@ the disk, so leave it in the drive and not write protected.
 
 Not everyone is ready from the start: the Kafenio is held by the Cretan and Psssst, every
 following stage up to the school brings one more defender to the village, and at the
-sheepfold, stage 8, the Lyra player joins in. A new defender is announced at the start of its
-stage. At the wedding, stage 10, the Bride is missing: she is at the altar, and 3 does not
-choose her.
+sheepfold, stage 8, the Lyra player joins in, at the cheese dairy (10) the Shepherd and at the
+monastery (13) the Priest. A new defender is announced at the start of its stage. At the
+wedding, stage 20, the Bride and the Priest are missing: they are at the altar, and 3 and 9 do
+not choose them.
 
 | | Key | Defender | Price | From stage | What it does |
 | --- | --- | --- | --- | --- | --- |
@@ -150,6 +153,8 @@ choose her.
 | ![](img/baker.png) | 6 | **Baker** | 60 | 4 | Hurls dakos (barley rusks) that splash onto everything around the target. |
 | ![](img/cauldron.png) | 5 | **Cauldron** | 110 | 5 | A toxic cloud of "unlicensed lipids and ascorbic acids": hurts every walker around it, ignoring armour, and slows them. It cannot reach drones, and tanks dent it as they pass. |
 | ![](img/lyra.png) | 7 | **Lyra player** | 90 | 8 | Plays the Cretan lyra, and his tune hits **every** invader around him, walkers and drones alike. The drones, charmed, slow down. The damage is small and armour takes its share: he is for swarms of drones, not for tanks. |
+| ![](img/shepherd.png) | 8 | **Shepherd** | 70 | 10 | A sling with the longest reach, drones too. His stones throw the guards back along the road. |
+| ![](img/priest.png) | 9 | **Priest** | 60 | 13 | He does not hit: he blesses his neighbours (left, right, above, below), who reload twice as fast. His bell holds the drones and guards around him still for a moment; the tanks do not listen. |
 
 ### Neighbours
 
@@ -164,9 +169,11 @@ next to its partner – left, right, above or below, not diagonally – hits har
 | Psssst | a Cretan | **–20%** |
 | Lyra player | another Lyra player | **–50%** |
 | Lyra player | a Yiayia | **+50%** |
+| Shepherd | a Lyra player | **+50%** |
 
 A Lyra player next to both a Yiayia and another Lyra player gets the –50%: two lyres playing
-different tunes spoil everything.
+different tunes spoil everything. The Priest's blessing is not a bonus: it counts for everyone
+next to him, however many.
 
 At most three defenders on the stage have a bonus at a time: the ones built first. A fourth
 fights at its own strength until one of the three is sold (penalties have no limit).
@@ -178,7 +185,7 @@ green for a bonus, red for a penalty, grey for a bonus that three others already
 
 | | Invader | What it does |
 | --- | --- | --- |
-| ![](img/drone.png) | **Bio-drone** | Fast and fragile. Flies its own shortcut over walls and trees, so only the Cretan, Psssst, the Bride, the Baker and the Lyra player can reach it. |
+| ![](img/drone.png) | **Bio-drone** | Fast and fragile. Flies its own shortcut over walls and trees, so only the Cretan, Psssst, the Bride, the Baker the Lyra player and the Shepherd can reach it. |
 | ![](img/guard.png) | **F&M compliance guard** | Armoured, with a weed-whacker and herbicide. Armour takes some of every hit, except the Cauldron's cloud; Psssst's laser melts it away. |
 | ![](img/tank.png) | **Weed destroyer** | A treaded tank with lots of armour and health. It dents Cauldrons beside the road, putting them out of action for a few seconds, and costs 20 HP if it gets through. |
 
@@ -272,12 +279,92 @@ half of them; the roads meet just below the yard.
 
 <div class="stage" markdown="1">
 
-**10. The Bride's wedding.** The last stand, in the courtyard of the village church, decked
-out for the wedding: the groom waits at the door and the guests sit at the long tables. The
-road runs between the tables, where only Psssst can sit. The Bride is at the altar, so here
-she does not fight. The last wave brings a column of tanks.
+**10. The cheese dairy.** The whitewashed dairy with its red tiles, milk churns and cheeses in the yard. The road takes a long way round between dry-stone walls and sheep. The Shepherd joins in here.
 
 ![Stage 10](img/stage10.png)
+
+</div>
+
+<div class="stage" markdown="1">
+
+**11. The watermill.** The stone mill with its wheel, by a stream. Two roads, which meet in the middle of the map.
+
+![Stage 11](img/stage11.png)
+
+</div>
+
+<div class="stage" markdown="1">
+
+**12. The Sfendoni cave.** The dark mouth of the cave in the rock face, and rocks everywhere, for Psssst. Two roads, one from each side, which become one.
+
+![Stage 12](img/stage12.png)
+
+</div>
+
+<div class="stage" markdown="1">
+
+**13. The monastery.** The dome and the cells, the abbot in the court. The road goes round the monastery. The Priest joins in here.
+
+![Stage 13](img/stage13.png)
+
+</div>
+
+<div class="stage" markdown="1">
+
+**14. The beehives.** The beekeeper's hut with its jars of honey, and hives between the roads. The road runs up and down in narrow lanes.
+
+![Stage 14](img/stage14.png)
+
+</div>
+
+<div class="stage" markdown="1">
+
+**15. The raki still.** The copper still on its fire, under a reed roof. The road comes down in three long hairpins.
+
+![Stage 15](img/stage15.png)
+
+</div>
+
+<div class="stage" markdown="1">
+
+**16. The windmills.** One big white windmill, and small ones all over the map. The longest, most winding road of the game.
+
+![Stage 16](img/stage16.png)
+
+</div>
+
+<div class="stage" markdown="1">
+
+**17. The threshing floor.** The round stone floor with its sheaves, the granary behind it and haystacks around. The road spirals in to the middle.
+
+![Stage 17](img/stage17.png)
+
+</div>
+
+<div class="stage" markdown="1">
+
+**18. The vineyard.** The winery with its barrels, and vines between the roads. Two roads, one from above and one from below.
+
+![Stage 18](img/stage18.png)
+
+</div>
+
+<div class="stage" markdown="1">
+
+**19. The summit chapel.** The little stone chapel on the top of Psiloritis, snow on its roof, among the rocks. The road climbs in tight hairpins.
+
+![Stage 19](img/stage19.png)
+
+</div>
+
+<div class="stage" markdown="1">
+
+**20. The Bride's wedding.** The last stand, in the courtyard of the village church, decked
+out for the wedding: the groom waits at the door and the guests sit at the long tables. The
+road runs between the tables, where only Psssst can sit. The Bride is at the altar, and the
+Priest marries her, so here they do not fight. The last wave brings a column of tanks.
+
+![Stage 20](img/stage20.png)
 
 </div>
 
@@ -294,6 +381,9 @@ she does not fight. The last wave brings a column of tanks.
 * Against swarms of drones, put the Lyra player where they fly past, with a Yiayia next to him,
   and keep Lyra players apart.
 * At the olive press, a defence near the point where the roads meet hits both.
+* The Shepherd reaches far: put him on a corner that sees a lot of road, next to a Lyra player.
+* Put the Priest among strong defenders: he blesses them all, and his bell keeps the guards
+  under their fire.
 * Call waves early when your defence is comfortable: the bonus adds up.
 
 ---

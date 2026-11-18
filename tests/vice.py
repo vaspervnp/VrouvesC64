@@ -78,7 +78,10 @@ class Vice:
         # if this one exits before the monitor answers, again with another port
         for attempt in range(5):
             self.port = free_port()
-            args = [X64, "-console", "-default", "-warp", "-silent", "-sounddev", "dummy", "-drive8type", "0",
+            # the disk in drive 8, read through the KERNAL traps (the stages
+            # load from it); test_disk asks for a true 1541 instead
+            args = [X64, "-console", "-default", "-warp", "-silent", "-sounddev", "dummy",
+                    "-drive8type", "1541", "+drive8truedrive", "-virtualdev8", "-8", D64,
                     "-binarymonitor", "-binarymonitoraddress", f"ip4://127.0.0.1:{self.port}",
                     "-autostartprgmode", "1", *os.environ.get("VICE_ARGS", "").split(), *extra_args,
                     "-autostart", image]

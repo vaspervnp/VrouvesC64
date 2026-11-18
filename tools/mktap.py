@@ -73,7 +73,8 @@ def check_sync():
 
 def main():
     """mktap.py out.tap boot.prg name block... : a block is file.prg[@entry]
-    (its load address from the file) or file.bin@load (raw)"""
+    (its load address from the file) or file.bin@load[,entry] (raw; the game
+    finds its stages by the entry, 1-20)"""
     out_path, boot_path, title, *blocks = sys.argv[1:]
     check_sync()
     boot = open(boot_path, "rb").read()
@@ -90,7 +91,8 @@ def main():
             load, data = data[0] | data[1] << 8, data[2:]
             entry = int(at, 0) if at else 0
         else:
-            load, entry = int(at, 0), 0
+            load, _, entry = at.partition(",")
+            load, entry = int(load, 0), int(entry or "0", 0)
         pulses += turbo(data, load, entry) + pause(500000)
     body = bytes(pulses)
     tap = b"C64-TAPE-RAW" + bytes([1, 0, 0, 0]) + struct.pack("<I", len(body)) + body

@@ -8,8 +8,8 @@
 ; =============================================================================
 
 TITLE_PAGE_FRAMES = 450
-TITLE_PAGES     = 5
-HS_PAGE         = 4
+TITLE_PAGES     = 6
+HS_PAGE         = 5
 PAGE_ROW        = 5
 
 title_screen
@@ -195,9 +195,12 @@ title_page
 +       cmp #2
         beq tp_defenders
         cmp #3
+        beq tp_defenders
+        cmp #4
         beq tp_invaders
         jmp hs_show
 
+; the defenders: the first five, then the later four
 tp_defenders
         ldx #COL_YELLOW
         ldy #COL_BLACK
@@ -206,7 +209,11 @@ tp_defenders
         ldy #PAGE_ROW
         jsr print_id_centered
         ldx #0
-        lda #7
+        lda tpage
+        cmp #2
+        beq +
+        ldx #5
++       lda #7
         bne tp_cast                     ; (always)
 
 tp_invaders
@@ -216,7 +223,7 @@ tp_invaders
         lda #T_ENEHDR
         ldy #PAGE_ROW
         jsr print_id_centered
-        ldx #7
+        ldx #9
         lda #7
 
 ; X = the first picture, A = its row: the pictures and their texts
@@ -241,16 +248,19 @@ tp_cast
         sta tc_row
         inc tc_i
         lda tc_i
-        cmp #7
+        cmp #5
         beq +
-        cmp #10
+        cmp #9
+        beq +
+        cmp #12
         bne -
 +       rts
 
 tc_i            .byte 0
 tc_row          .byte 0
-cast_text       .byte T_CAST1,T_CAST2,T_CAST3,T_CAST4,T_CAST5,T_CAST6,T_CAST7,T_ENE1,T_ENE2,T_ENE3
-cast_step       .byte 2,2,2,2,2,2,2,3,3,3
+cast_text       .byte T_CAST1,T_CAST2,T_CAST3,T_CAST4,T_CAST5,T_CAST6,T_CAST7,T_CAST8,T_CAST9
+                .byte T_ENE1,T_ENE2,T_ENE3
+cast_step       .byte 3,3,3,3,3,3,3,3,3,3,3,3
 
 ; X = picture (icons: 3 x 2 cells), tc_row: at columns 1-3
 draw_icon
@@ -342,8 +352,8 @@ _row2   ldx #1
         bne -
         rts
 
-icon_lo         .byte <(icons + range(10) * 60)
-icon_hi         .byte >(icons + range(10) * 60)
+icon_lo         .byte <(icons + range(12) * 60)
+icon_hi         .byte >(icons + range(12) * 60)
 
 tp_keys
         lda #<title_art_bmp             ; the scene, packed

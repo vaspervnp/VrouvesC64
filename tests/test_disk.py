@@ -51,7 +51,7 @@ class DiskTest(unittest.TestCase):
             entry = [2, 1, 1, score & 255, score >> 8]
             self.assertEqual(list(vm.peek("hs_table", 5)), entry)
             # the last stage won: the ending from the disk
-            vm.poke("start_stage", 9)
+            vm.poke("start_stage", 19)
             start(vm)
             vm.poke("wave_num", 10)
             vm.poke("wave_state", 1)

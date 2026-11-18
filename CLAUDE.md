@@ -13,7 +13,7 @@ and why.
 |---|---|
 | Two screens, dirty rectangles, a background copy, software sprites | One multicolour bitmap. Invaders, effects, cursor: hardware sprites through the multiplexer. Only cells change in the bitmap. |
 | Drawing at 12.5 fps, logic at 25 Hz | The same: `game_run` takes a pass every `PASS_FRAMES` (4) frames, two ticks in it. The keys are read every frame between (`kbd_scan`). |
-| Stages and title loaded from disk; code in screen tails | One PRG; every stage in memory, packed: `stage_load` unpacks its maps and own tiles into `st_buf` (`tools/lz.py`, `lz.asm`). Tile numbers below `NUM_COMMON` are the tiles of three stages or more, kept unpacked. |
+| Stages and title loaded from disk; code in screen tails | One PRG with the title and all the code; a stage's file (`build/stages/sNN`: maps, tiles, sacks, roads, waves, packed) is loaded by `stage_fetch` into `st_file` (disk: `VR-Snn` through the KERNAL; tape: the block whose entry is its number) and unpacked into `st_buf`. `st_*` tables point into `st_buf`. The tape version resets the C64 after a game, as the CPC's does: the stages are behind it on the tape. |
 | AY player | The SID player of Sugar Byte (`src/sound.asm`, `tools/mkmusic64.py`, `music/*.txt`). |
 
 ## Memory (`src/main.asm`, `src/const.inc`, `src/vars.inc`)
@@ -23,6 +23,8 @@ and why.
 - VIC bank 3: screen `$c000`, bitmap `$e000` (under the KERNAL), sprites `$d000` (under the I/O,
   copied at start with `$01 = $34`). Workspace `$c400-$cfff`. Code and data `$0801-$bfff`
   (asserted).
+- The tests run with the disk in drive 8 through the KERNAL traps (`tests/vice.py`): the stages
+  load from it.
 - Loading the ending overwrites `$c000-$c7d0`: screen RAM and the start of the workspace. Nothing
   there may need to survive it (the high score table lives in the PRG's data).
 

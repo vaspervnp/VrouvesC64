@@ -5,6 +5,18 @@ import unittest
 from game import Vice, start_game, press, frames, build, move_to, funds, set_funds, state
 
 
+def by_the_road(vm, n=1):
+    """grass cells next to the road: (c, r), the first n of them, side by side"""
+    cmap = vm.peek(vm.labels["cmap"], 20 * 14)
+    at = lambda c, r: cmap[r * 20 + c] if 0 <= c < 20 and 0 <= r < 14 else 9
+    for r in range(14):
+        for c in range(20 - n):
+            if all(at(c + i, r) == 0 for i in range(n)) and \
+                    any(at(c + i + dc, r + dr) == 1 for i in range(n) for dc, dr in ((0, 1), (0, -1))):
+                return c, r
+    raise AssertionError("no room by the road")
+
+
 def win_now(vm):
     vm.poke("wave_num", 10)
     vm.poke("wave_state", 1)
@@ -200,6 +212,53 @@ class GameTest(unittest.TestCase):
         self.assertGreater(vm.peek8(vm.labels["e_slow"]), 0)        # the drone slows,
         self.assertEqual(vm.peek8(vm.labels["e_slow"] + 1), 0)      # the guard does not
 
+    def test_priest(self):
+        vm = self.vm
+        set_funds(vm, 900)
+        vm.poke("unlock", 0xff)
+        vm.poke("unlock_hi", 1)
+        c, r = by_the_road(vm, 2)
+        build(vm, 9, c, r)                                          # the priest,
+        build(vm, 1, c + 1, r)                                      # a cretan next to him
+        self.assertEqual(vm.peek16("score"), 6)                     # (the priest: no points)
+        tx, ty = vm.peek8("t_cx"), vm.peek8("t_cy")
+        for i, (kind, x) in enumerate(((1, tx - 2), (3, tx - 2))):  # a drone, a tank
+            for name, v in (("e_type", kind), ("e_hp", 200), ("e_arm", 0), ("e_x", x), ("e_y", ty),
+                            ("e_spd", 20), ("e_rem", 200), ("e_slow", 0)):
+                vm.poke(vm.labels[name] + i, bytes([v]))
+        vm.poke("en_count", 2)
+        vm.poke("t_cd", bytes([1, 1]))
+        frames(vm, 2)
+        self.assertGreater(vm.peek8(vm.labels["e_slow"]), 40)       # the drone stands still
+        self.assertEqual(vm.peek8(vm.labels["e_slow"] + 1), 0)      # the tank does not
+        x = vm.peek8("e_x")
+        frames(vm, 4)
+        self.assertEqual(vm.peek8("e_x"), x)
+        self.assertLessEqual(vm.peek8(vm.labels["t_cd"] + 1), 9)    # blessed: 18 / 2
+
+    def test_shepherd_throws_guards_back(self):
+        vm = self.vm
+        set_funds(vm, 900)
+        vm.poke("unlock", 0xff)
+        build(vm, 8, *by_the_road(vm))
+        press(vm, "N")                                              # wave 1: guards
+        back = False
+        last = {}
+        for _ in range(300):
+            frames(vm, 1)
+            types = vm.peek("e_type", 16)
+            progs = vm.peek("e_prog_lo", 16)
+            gens = vm.peek("e_gen", 16)
+            for i in range(16):
+                if types[i] == 2:
+                    k = gens[i]
+                    if k in last and progs[i] < last[k]:
+                        back = True
+                    last[k] = progs[i]
+            if back:
+                break
+        self.assertTrue(back)
+
     def test_lyra_neighbours(self):
         vm = self.vm
         set_funds(vm, 900)
@@ -261,14 +320,16 @@ class StagesTest(unittest.TestCase):
             self.assertLess(xs[0], 40)                              # one from the left,
             self.assertGreater(xs[1], 40)                           # the next from the right
 
-    def test_no_bride_at_the_wedding(self):
+    def test_no_bride_nor_priest_at_the_wedding(self):
         with Vice() as vm:
-            start_game(vm, 9)
-            self.assertEqual(vm.peek8("unlock"), 0x7f & ~4)
+            start_game(vm, 19)
+            self.assertEqual((vm.peek8("unlock"), vm.peek8("unlock_hi")), (0xff & ~4, 0))
             press(vm, "3")
             self.assertNotEqual(vm.peek8("sel_type"), 3)
-            press(vm, "7")
-            self.assertEqual(vm.peek8("sel_type"), 7)
+            press(vm, "9")
+            self.assertNotEqual(vm.peek8("sel_type"), 9)
+            press(vm, "8")
+            self.assertEqual(vm.peek8("sel_type"), 8)
 
     def test_retry_restores_the_maps(self):
         with Vice() as vm:

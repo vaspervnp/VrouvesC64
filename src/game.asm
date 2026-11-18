@@ -20,30 +20,31 @@ et_spd          .byte 20,9,7
 et_arm          .byte 0,2,4
 et_rew          .byte 3,4,10
 et_dmg          .byte 4,8,20
-; defenders (cretan, yiayia, bride, psssst, cauldron, baker, lyra player)
-tt_cost         .byte 35,50,70,80,110,60,90
-tt_range        .byte 30,18,28,36,22,34,26
-tt_cd           .byte 18,22,6,10,32,36,26
-tt_dmg          .byte 6,14,4,5,8,16,4
-tt_air          .byte 1,0,1,1,0,1,1
-tt_proj         .byte PT_BULLET,0,PT_PISTOL,PT_LASER,0,PT_DAKOS,0
-tt_sfx          .byte SFX_RIFLE,SFX_BASH,SFX_PISTOL,SFX_LASER,SFX_PUFF,SFX_THROW,SFX_LYRA
-tt_sell         .byte 17,25,35,40,55,30,45
+; defenders (cretan, yiayia, bride, psssst, cauldron, baker, lyra player,
+; shepherd, priest)
+tt_cost         .byte 35,50,70,80,110,60,90,70,60
+tt_range        .byte 30,18,28,36,22,34,26,44,30
+tt_cd           .byte 18,22,6,10,32,36,26,26,75
+tt_dmg          .byte 6,14,4,5,8,16,4,14,0
+tt_air          .byte 1,0,1,1,0,1,1,1,1
+tt_proj         .byte PT_BULLET,0,PT_PISTOL,PT_LASER,0,PT_DAKOS,0,PT_STONE,0
+tt_sfx          .byte SFX_RIFLE,SFX_BASH,SFX_PISTOL,SFX_LASER,SFX_PUFF,SFX_THROW,SFX_LYRA,SFX_SLING,SFX_BELL
+tt_sell         .byte 17,25,35,40,55,30,45,35,30
 ; the neighbour bonus, in pairs (the first that applies counts): defender,
 ; partner, damage factor in 16ths, its text
-SYN_PAIRS       = 6
-syn_type        .byte TT_YIAYIA,TT_BRIDE,TT_PSSSST,TT_BAKER,TT_LYRA,TT_LYRA
-syn_partner     .byte TT_BAKER,TT_CRETAN,TT_CRETAN,TT_CRETAN,TT_LYRA,TT_YIAYIA
-syn_factor      .byte 19,24,13,8,8,24
-syn_text        .byte T_SYN20P,T_SYN50P,T_SYN20M,T_SYN50M,T_SYN50M,T_SYN50P
+SYN_PAIRS       = 7
+syn_type        .byte TT_YIAYIA,TT_BRIDE,TT_PSSSST,TT_BAKER,TT_LYRA,TT_LYRA,TT_SHEPHERD
+syn_partner     .byte TT_BAKER,TT_CRETAN,TT_CRETAN,TT_CRETAN,TT_LYRA,TT_YIAYIA,TT_LYRA
+syn_factor      .byte 19,24,13,8,8,24,24
+syn_text        .byte T_SYN20P,T_SYN50P,T_SYN20M,T_SYN50M,T_SYN50M,T_SYN50P,T_SYN50P
 ; shots: speed across (pixels), down (lines)
-pr_sx           .byte 6,7,10,3
-pr_sy           .byte 9,10,15,5
+pr_sx           .byte 6,7,10,3,4
+pr_sy           .byte 9,10,15,5,6
 ; effects: frames a and b, lifetime
 fx_a            .byte SPR_SPARK_A,SPR_PUFF_A,SPR_BASH_A,SPR_POOF_A,SPR_BOOM_A,SPR_ZAP_A,SPR_NOTE_A
 fx_b            .byte SPR_SPARK_B,SPR_PUFF_B,SPR_BASH_B,SPR_POOF_B,SPR_BOOM_B,SPR_SPARK_B,SPR_NOTE_B
 fx_life         .byte 6,12,8,10,12,6,10
-sel_keys        .byte K_1,K_2,K_3,K_4,K_5,K_6,K_7
+sel_keys        .byte K_1,K_2,K_3,K_4,K_5,K_6,K_7,K_8,K_9
 sq_lo           .byte <(range(64) * range(64))
 sq_hi           .byte >(range(64) * range(64))
 
@@ -117,6 +118,21 @@ game_tick
         jsr update_fx
         jmp banner_tick
 
+; the screen while a stage loads
+loading_screen
+        jsr screen_off
+        lda #0
+        sta ob_n
+        jsr mux_build_wait
+        jsr clear_screen
+        ldx #COL_WHITE
+        ldy #COL_BLACK
+        jsr set_colors
+        lda #T_LOADING
+        ldy #12
+        jsr print_id_centered
+        jmp screen_on
+
 ; the stage's data: paths, tiles, flag, defenders
 stage_load
         ldx stage
@@ -132,9 +148,10 @@ stage_load
         sta flag_x
         lda st_flag_y,x
         sta flag_y
-        lda st_pack_lo,x                ; its maps and tiles
+        jsr stage_fetch                 ; its file, from the disk or the tape
+        lda #<st_file                   ; unpacked: maps, tiles, sacks, paths, waves
         sta src
-        lda st_pack_hi,x
+        lda #>st_file
         sta src+1
         lda #<st_buf
         sta dst
@@ -217,6 +234,8 @@ game_init
         ldx stage
         lda st_unlock,x
         sta unlock
+        lda st_unlock_hi,x
+        sta unlock_hi
         jsr clear_screen
         jsr compose_all
         jsr flag_cache
@@ -226,8 +245,10 @@ game_init
         .if DEBUG != 0
         lda #DEBUG-1                    ; -D DEBUG=n: at wave n, every defender
         sta wave_num
-        lda #$7f
+        lda #$ff
         sta unlock
+        lda #1
+        sta unlock_hi
         .else
         ldx stage                       ; the defender this stage brings
         lda st_ann1,x
@@ -353,19 +374,24 @@ _ne     lda paused
         rts
 +       jsr cursor_input
         ldx #0
--       lda sel_keys,x                  ; 1-7: a defender this stage has
+-       lda sel_keys,x                  ; 1-9: a defender this stage has
         jsr key_hit
         bcc _nk
+        cpx #8
+        bcs +
         lda unlock
         and bit_tab,x
-        beq _nk
+        jmp ++
++       lda unlock_hi                   ; (the ninth)
+        and #1
++       beq _nk
         inx
         stx sel_type
         dex
         lda #HUDF_INFO
         jsr hud_set
 _nk     inx
-        cpx #7
+        cpx #9
         bne -
         jsr fire_hit
         bcc +
@@ -1055,6 +1081,9 @@ enemy_move
         beq +
         dec e_slow,x
         lsr a
+        cpy #BELL_STILL+1               ; the Priest's bell: standing still
+        bcc +
+        lda #0
 +       clc
         adc e_acc,x
         tay
@@ -1359,7 +1388,24 @@ _rdy    lda tr_budget                   ; only a few look for a target a tick
         lda #4                          ; nobody in reach: again later
         sta t_cd,y
         rts
-_fire   ldy iy
+_fire   lda unlock_hi                   ; a stage with the Priest: next to him,
+        and #1                          ; the wait halves
+        beq +
+        ldy iy
+        lda t_type,y
+        cmp #TT_PRIEST
+        beq +
+        sta t3
+        lda t_col,y
+        sta t4
+        lda t_row,y
+        sta t5
+        lda #TT_PRIEST
+        sta t1
+        jsr syn_near
+        bcc +
+        lsr tr_cd
++       ldy iy
         lda tr_cd
         sta t_cd,y
         stx ix
@@ -1377,6 +1423,9 @@ _fire   ldy iy
 +       cmp #TT_LYRA
         bne +
         jmp fire_lyra
++       cmp #TT_PRIEST
+        bne +
+        jmp fire_priest
 +       lda t_type,y                    ; the bride: criticals
         cmp #TT_BRIDE
         bne _nc
@@ -1513,7 +1562,7 @@ syn_find
         stx t2
         lda syn_partner,x
         sta t1
-        jsr _near
+        jsr syn_near
         ldx t2
         bcs _hit
 +       inx
@@ -1521,7 +1570,10 @@ syn_find
         bne -
         clc
 _hit    rts
-_near   ldy #MAX_TW-1                   ; a defender of type t1 next door: C set
+; t1 = type, t4 = col, t5 = row -> C set if one of them is next door.
+; Uses A, Y.
+syn_near
+        ldy #MAX_TW-1
 _l      lda t_type,y
         cmp t1
         bne _n
@@ -1737,6 +1789,86 @@ _n      dex
         bpl _l
         rts
 
+; the priest: his bell holds the drones and the guards in reach still for a
+; while (the tanks do not listen)
+fire_priest
+        ldx #MAX_EN-1
+_l      lda e_type,x
+        beq _n
+        cmp #ET_TANK
+        beq _n
+        ldy iy
+        jsr in_range
+        bcc _n
+        lda #BELL_STUN
+        sta e_slow,x
+_n      dex
+        bpl _l
+        ldy iy                          ; the bell rings over him
+        lda t_cx,y
+        sec
+        sbc #2
+        sta fx_px
+        lda t_cy,y
+        sec
+        sbc #16
+        sta fx_py
+        lda #FX_BASH
+        jmp spawn_fx
+
+; X = an invader a stone has hit: a guard is thrown back along his road,
+; KNOCK_STEPS, never behind where he started.  Preserves X, Y.
+knockback
+        lda e_type,x
+        cmp #ET_GUARD
+        bne _r
+        sty kb_y
+        lda #KNOCK_STEPS
+        sta kb_n
+_st     lda e_prog_lo,x
+        ora e_prog_hi,x
+        beq _done                       ; at the start of his road
+        jsr enemy_seg                   ; Y = the segment: dx, dy, steps
+        iny
+        iny
+        lda e_rem,x
+        cmp (ptr2),y
+        bcc _in
+        dec e_seg,x                     ; at its start: back into the one before
+        lda #0
+        sta e_rem,x
+        jsr enemy_seg
+        iny
+        iny
+_in     inc e_rem,x                     ; enemy_step backwards
+        dey
+        lda e_y,x
+        sec
+        sbc (ptr2),y
+        sta e_y,x
+        dey
+        lda e_sub,x
+        sec
+        sbc #1
+        bcs +
+        lda e_x,x
+        sec
+        sbc (ptr2),y
+        sta e_x,x
+        lda #2
++       sta e_sub,x
+        lda e_prog_lo,x
+        bne +
+        dec e_prog_hi,x
++       dec e_prog_lo,x
+        dec kb_n
+        bne _st
+_done   ldy kb_y
+_r      rts
+
+kb_y            .byte 0
+kb_n            .byte 0
+
 ; =============================================================================
 ; shots
 ; =============================================================================
@@ -1902,7 +2034,11 @@ _impact lda p_type,y
         bmi _r
         ldx p_tgt,y
         lda t3
-        cmp #PT_LASER                   ; the laser melts armour
+        cmp #PT_STONE                   ; the shepherd's stone throws a guard back
+        bne +
+        jsr knockback
+        lda t3
++       cmp #PT_LASER                   ; the laser melts armour
         bne +
         lda e_arm,x
         beq +

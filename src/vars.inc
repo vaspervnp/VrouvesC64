@@ -226,7 +226,8 @@ ticks_due       .byte ?
 frame_acc       .byte ?
 flag_frame      .byte ?
 tw_seq          .byte ?                 ; the last t_seq given
-unlock          .byte ?                 ; the stage's defenders, a bit per type
+unlock          .byte ?                 ; the stage's defenders, a bit per type,
+unlock_hi       .byte ?                 ; (bit 0: the Priest, the ninth)
 GV_END
 SSTATE                                  ; sound.asm's state
         .fill 140

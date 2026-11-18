@@ -122,7 +122,11 @@ _play   jsr game_run
         bcc _play
         lda game_over                   ; won: on to the next stage
         cmp #1
+        .if TAPE != 0
+        bne tape_reset                  ; (the tape has gone on: the C64 starts again)
+        .else
         bne main_title
+        .endif
         lda stage
         clc
         adc #1
@@ -190,7 +194,8 @@ data_end
 ; workspace after the program (not in the file)
         .virtual data_end
 EMASK2          .fill SPR_FIRST_FX * 72 ; shots.asm: the invaders' masks, half way
-st_buf          .fill ST_BUF_SIZE       ; the stage: its maps and tiles, unpacked
+st_buf          .fill ST_BUF_SIZE       ; the stage: its maps and tiles..., unpacked
+st_file         .fill ST_FILE_SIZE      ; and its file, packed, as it is loaded
 rg_lo           .fill 256               ; shots.asm: the ring of line records
 rg_hi           .fill 256
 rg_b0           .fill 256

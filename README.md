@@ -1,7 +1,7 @@
 # LET'S GO FOR VROUVES / ΠΑΜΕ ΓΙΑ ΒΡΟΥΒΕΣ — Commodore 64
 
 A top-down tower defence game for the **Commodore 64** (PAL), written in **6510 assembly**. It is the
-C64 version of the [Amstrad CPC game](../VrouvesCPC): the same ten stages, waves, defenders, invaders,
+C64 version of the [Amstrad CPC game](../VrouvesCPC): the same twenty stages, waves, defenders, invaders,
 rules, score, texts (English and Greek), graphics and music, rebuilt for the C64's hardware.
 
 Armed with EU Directive 8647/2026, Frankenstein & Moreau CO. send bio-drones, compliance squads and
@@ -28,24 +28,28 @@ RUN
 ```
 
 The loading picture (`assets/vrouves.jpeg`, with the title) shows while the game loads. The disk stays
-in the drive: the high scores are read from it and saved on it (`VR-HISCORE`), and the ending's picture
-is loaded from it after the last stage.
+in the drive: each stage is loaded from it when it is reached (`VR-S01` to `VR-S20`), the high scores
+are read from it and saved on it (`VR-HISCORE`), and the ending's picture is loaded from it after the
+last stage.
 
 ### On cassette
 
 `build/vrouves.tap`: `LOAD` and `RUN` (or SHIFT+RUN/STOP). A small boot file loads at the
 KERNAL's speed, then a turbo loader (`src/tape.asm`, the one of the C64 Sugar Byte) reads the
 loading picture, shown at once, and the game under it, the border flickering with the bits
-(about 3 minutes of tape in all). The ending follows on the tape: leave it in the deck, it is read
-when the last stage is won, and after it the C64 starts again. The high scores are kept for as
-long as the C64 is on. A red border: a block did not load; wind back a little and PLAY.
+(about 5 minutes of tape in all). The stages follow on the tape, a block each, then the ending:
+leave the tape in the deck, each is read when it is reached (the loader skips to the block it
+wants). A stage lost with a life left is played again without loading; after the ending, or a
+game over or quit, the C64 starts again, as the CPC does at the end of its tape. The cassette
+version counts the score but keeps no table. A red border: a block did not load; wind back a
+little and PLAY.
 
 ## Controls
 
 | Key | Action |
 | --- | --- |
 | Cursor keys (up / left with SHIFT) / Q A O P / joystick (port 2 or 1) | Move the build cursor |
-| 1 – 7 | Choose a defender |
+| 1 – 9 | Choose a defender |
 | SPACE / RETURN / FIRE | Build on the cursor tile |
 | S / DEL | Sell the defender under the cursor (half price back) |
 | N | Call the next wave now (half the seconds left on the countdown are paid as a bonus) |
@@ -63,11 +67,14 @@ Easy 4, Medium 3, Hard 2, Hardest none).
 Everything about the rules is the CPC's, tick for tick (see its [README](../VrouvesCPC/README.md)),
 but for one: at most three defenders on the stage have a neighbour's bonus at a time (the ones built
 first). The rest:
-seven defenders that join the village stage by stage (Cretan, Psssst, Yiayia, Bride, Baker, Cauldron,
-and the Lyra player from stage 8; at the wedding, stage 10, the Bride is at the altar),
+nine defenders that join the village stage by stage (Cretan, Psssst, Yiayia, Bride, Baker, Cauldron,
+the Lyra player from stage 8, the Shepherd from 10, whose stones throw the guards back, and the
+Priest from 13, who blesses his neighbours and whose bell holds the invaders still; at the wedding,
+stage 20, the Bride and the Priest are at the altar),
 neighbours that hit harder or softer side by side, three invaders (bio-drones that fly over the walls,
 armoured guards, tanks that dent cauldrons), ten waves a stage, the score, the lives, the high score
-table, a stage with two roads (the olive press), and the Bride's wedding when the last stage is won.
+table, stages with two roads, and the Bride's wedding when the last stage is won. Stages 10 to 19
+come from the Android version, by way of the CPC's.
 
 ## On the C64
 
@@ -75,9 +82,10 @@ table, a stage with two roads (the olive press), and the Bride's wedding when th
   C64's multicolour one, so the CPC's playfield (20 × 14 tiles of 8 × 12), its HUD rows and its 3×6 font
   (a letter a 4 × 8 cell) are laid out the same. The CPC's 16 pens map to C64 colours
   (`tools/c64gfx.py`); the grass green is the background colour.
-- **Every stage in memory, packed**: a stage's maps and its own tiles are unpacked into `st_buf` when
-  it is loaded (`tools/lz.py`, `src/lz.asm`); the tiles of three stages or more stay unpacked, for
-  them all.
+- **A stage at a time, from the disk or the tape**: a stage's file (its maps, its tiles, its sacks,
+  roads and waves, packed: `tools/lz.py`) is loaded into `st_file` when it is reached and unpacked
+  into `st_buf` (`src/lz.asm`); the disk version loads it through the KERNAL (`src/disk.asm`), the
+  tape version finds its block by number (`src/tapegame.asm`).
 - **The playfield is composed at run time** (`src/compose.asm`), cell by cell: the tile under the
   cell (CPC pens, two a byte), the defender standing there, the flag. A cell shows the background and
   three colours of its own: the 32 pixels' colours are counted, the three most common kept, and the

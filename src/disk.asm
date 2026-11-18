@@ -201,6 +201,35 @@ _fail   php
         sta VIC_BG0
         rts
 
+; the stage's file (VR-Snn) into st_file, until it loads
+stage_fetch
+        jsr loading_screen
+        lda stage                       ; its number, two digits
+        clc
+        adc #1
+        ldx #"0"-1
+-       inx
+        sec
+        sbc #10
+        bcs -
+        adc #"0"+10
+        stx st_fname+4
+        sta st_fname+5
+-       jsr disk_begin
+        lda #<st_file
+        sta dst
+        lda #>st_file
+        sta dst+1
+        lda #ST_NAME_LEN
+        ldx #<st_fname
+        ldy #>st_fname
+        jsr disk_load
+        jsr disk_end
+        bcs -
+        rts
+
+st_fname        .text "VR-S00"
+ST_NAME_LEN     = * - st_fname
 end_scr_name    .text "VR-ENDSCR"
 END_SCR_LEN     = * - end_scr_name
 end_bmp_name    .text "VR-ENDBMP"

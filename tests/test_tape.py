@@ -16,7 +16,7 @@ class TapeTest(unittest.TestCase):
         with Vice(image=TAP, labels=LABELS) as vm:
             vm.run_to("title_frame", 3, timeout=1500)
             self.assertEqual(vm.peek8(0xd011) & 0x20, 0x20)
-            vm.poke("start_stage", 9)                       # the last stage, won at once
+            vm.poke("start_stage", 19)                       # the last stage, won at once
             vm.poke("test_keys", K["SPACE"])
             vm.run_to("frame_done", 1, timeout=120)
             vm.poke("test_keys", NONE)

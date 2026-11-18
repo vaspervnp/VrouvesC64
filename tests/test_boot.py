@@ -38,7 +38,7 @@ class BootTest(unittest.TestCase):
         self.assertEqual(self.vm.peek16(0x0314), 0xEA31)
 
     def test_pages_and_language(self):
-        for page in range(5):
+        for page in range(6):
             self.assertEqual(self.vm.peek8("tpage"), page)
             press(self.vm, "J_RIGHT", at="title_frame")
         self.assertEqual(self.vm.peek8("tpage"), 0)

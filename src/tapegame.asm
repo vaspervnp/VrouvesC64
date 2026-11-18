@@ -9,6 +9,38 @@ hs_load
 hs_save
         rts
 
+; the stage's block (its entry: stage + 1) into st_file: the tape runs on
+; to it
+stage_fetch
+        jsr loading_screen
+        jsr tape_begin
+-       jsr tape_load
+        bcs -
+        lda tape_head+4
+        sec
+        sbc #1
+        cmp stage
+        bne -
+        lda #1                          ; the interrupts on again
+        sta VIC_IRQ
+        sta VIC_IRQ_MASK
+        cli
+        rts
+
+; the interrupts and the sprites off, the SID quiet
+tape_begin
+        sei
+        lda #0
+        sta VIC_IRQ_MASK
+        sta VIC_SPR_ENA
+        lda #1
+        sta VIC_IRQ
+        lda #0
+        sta SID+4
+        sta SID+11
+        sta SID+18
+        rts
+
 ending_show
         jsr wait_frame
         jsr shots_erase
@@ -19,16 +51,7 @@ ending_show
         lda #T_LOADING
         ldx #$ff
         jsr banner_show
-        sei
-        lda #0
-        sta VIC_IRQ_MASK
-        sta VIC_SPR_ENA
-        lda #1
-        sta VIC_IRQ
-        lda #0                          ; the SID quiet
-        sta SID+4
-        sta SID+11
-        sta SID+18
+        jsr tape_begin
 -       jsr tape_load                   ; screen and colour RAM, bg ($c000)
         bcs -
 -       jsr tape_load                   ; the bitmap ($e000)
@@ -57,7 +80,8 @@ ending_show
         jsr kbd_update
         jsr fire_hit
         bcc -
-        sei                             ; the C64 starts again
+tape_reset                              ; the C64 starts again
+        sei
         lda #$37
         sta $01
         jmp ($fffc)
